@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
+import { db } from '../firebase';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 export interface Radius {
   id: string;
   name: string;
   lat: number;
   lng: number;
-  radius: number; // in meters
+  radius: number;
   color: string;
   opacity: number;
   visible: boolean;
   borderStyle: 'solid' | 'dashed' | 'dotted';
   fill: boolean;
+  userId?: string;
 }
 
 interface AppState {
@@ -20,69 +23,83 @@ interface AppState {
   mapCenter: { lat: number; lng: number };
   mapZoom: number;
   sidebarOpen: boolean;
+  loading: boolean;
 
   // Actions
-  addRadius: (lat: number, lng: number) => void;
-  updateRadius: (id: string, updates: Partial<Radius>) => void;
-  removeRadius: (id: string) => void;
+  setRadii: (radii: Radius[]) => void;
+  addRadius: (lat: number, lng: number, userId?: string) => Promise<void>;
+  updateRadius: (id: string, updates: Partial<Radius>) => Promise<void>;
+  removeRadius: (id: string) => Promise<void>;
   selectRadius: (id: string | null) => void;
   setMapCenter: (lat: number, lng: number) => void;
   setMapZoom: (zoom: number) => void;
   toggleSidebar: () => void;
-  setSidebarOpen: (open: boolean) => void;
+  setLoading: (loading: boolean) => void;
 }
 
-const DEFAULT_COLORS = [
-  '#EF4444', // Red
-  '#F97316', // Orange
-  '#F59E0B', // Amber
-  '#10B981', // Emerald
-  '#3B82F6', // Blue
-  '#6366F1', // Indigo
-  '#8B5CF6', // Violet
-  '#EC4899', // Pink
-];
+const DEFAULT_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'];
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   radii: [],
   selectedRadiusId: null,
-  mapCenter: { lat: 29.9511, lng: -90.0715 }, // Default: New Orleans, LA
+  mapCenter: { lat: 29.9511, lng: -90.0715 },
   mapZoom: 10,
   sidebarOpen: true,
+  loading: false,
 
-  addRadius: (lat, lng) => set((state) => {
-    const newColor = DEFAULT_COLORS[state.radii.length % DEFAULT_COLORS.length];
+  setRadii: (radii) => set({ radii }),
+  setLoading: (loading) => set({ loading }),
+
+  addRadius: async (lat, lng, userId) => {
+    const { radii } = get();
+    const newColor = DEFAULT_COLORS[radii.length % DEFAULT_COLORS.length];
+    const id = uuidv4();
     const newRadius: Radius = {
-      id: uuidv4(),
-      name: `Location ${state.radii.length + 1}`,
+      id,
+      name: `Location ${radii.length + 1}`,
       lat,
       lng,
-      radius: 8046.72, // 5 miles in meters
+      radius: 8046.72,
       color: newColor,
       opacity: 0.3,
       visible: true,
       borderStyle: 'solid',
       fill: true,
+      userId
     };
-    return { 
-      radii: [...state.radii, newRadius],
-      selectedRadiusId: newRadius.id,
-      sidebarOpen: true 
-    };
-  }),
 
-  updateRadius: (id, updates) => set((state) => ({
-    radii: state.radii.map((r) => (r.id === id ? { ...r, ...updates } : r)),
-  })),
+    if (userId) {
+      await setDoc(doc(db, 'radii', id), newRadius);
+    } else {
+      set((state) => ({ radii: [...state.radii, newRadius], selectedRadiusId: id }));
+    }
+  },
 
-  removeRadius: (id) => set((state) => ({
-    radii: state.radii.filter((r) => r.id !== id),
-    selectedRadiusId: state.selectedRadiusId === id ? null : state.selectedRadiusId,
-  })),
+  updateRadius: async (id, updates) => {
+    const radius = get().radii.find(r => r.id === id);
+    if (radius?.userId) {
+      await setDoc(doc(db, 'radii', id), { ...radius, ...updates });
+    } else {
+      set((state) => ({
+        radii: state.radii.map((r) => (r.id === id ? { ...r, ...updates } : r)),
+      }));
+    }
+  },
+
+  removeRadius: async (id) => {
+    const radius = get().radii.find(r => r.id === id);
+    if (radius?.userId) {
+      await deleteDoc(doc(db, 'radii', id));
+    } else {
+      set((state) => ({
+        radii: state.radii.filter((r) => r.id !== id),
+        selectedRadiusId: state.selectedRadiusId === id ? null : state.selectedRadiusId,
+      }));
+    }
+  },
 
   selectRadius: (id) => set({ selectedRadiusId: id }),
   setMapCenter: (lat, lng) => set({ mapCenter: { lat, lng } }),
   setMapZoom: (zoom) => set({ mapZoom: zoom }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
 }));

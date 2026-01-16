@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'r
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useStore } from '../store/useStore';
+import { auth } from '../firebase';
 
 // Fix for default Leaflet marker icons in React
 // @ts-ignore
@@ -29,7 +30,7 @@ const MapEvents = () => {
   
   useMapEvents({
     click(e) {
-      addRadius(e.latlng.lat, e.latlng.lng);
+      addRadius(e.latlng.lat, e.latlng.lng, auth.currentUser?.uid);
     },
   });
 

@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "mapr-12222"
+  },
+  "targets": {},
+  "etags": {}
+}

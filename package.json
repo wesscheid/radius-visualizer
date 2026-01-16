@@ -11,12 +11,13 @@
     "@types/node": "^16.18.126",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
-    "@types/uuid": "^11.0.0",
     "clsx": "^2.1.1",
+    "firebase": "^12.8.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.562.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-firebase-hooks": "^5.1.1",
     "react-leaflet": "^4.2.1",
     "react-scripts": "5.0.1",
     "tailwind-merge": "^3.4.0",
@@ -27,7 +28,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

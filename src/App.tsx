@@ -3,6 +3,7 @@ import MapComponent from './components/MapComponent';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import { useStore } from './store/useStore';
+import { auth } from './firebase';
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,7 +23,7 @@ function App() {
         const lat = parseFloat(result.lat);
         const lng = parseFloat(result.lon);
 
-        addRadius(lat, lng);
+        addRadius(lat, lng, auth.currentUser?.uid);
         setMapCenter(lat, lng);
         setSearchQuery('');
       } else {
