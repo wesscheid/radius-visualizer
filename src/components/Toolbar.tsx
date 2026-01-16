@@ -1,13 +1,33 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { Menu, Plus, Map, Share2 } from 'lucide-react';
+import { Menu, Plus, Map, Share2, Locate } from 'lucide-react';
+import { auth } from '../firebase';
 
 const Toolbar: React.FC = () => {
-  const { toggleSidebar, sidebarOpen, addRadius, mapCenter } = useStore();
+  const { toggleSidebar, sidebarOpen, addRadius, mapCenter, setMapCenter, setMapZoom } = useStore();
 
   const handleAddCenter = () => {
     // Helper to add a radius at the center of the screen
-    addRadius(mapCenter.lat, mapCenter.lng);
+    addRadius(mapCenter.lat, mapCenter.lng, auth.currentUser?.uid);
+  };
+
+  const handleLocate = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setMapCenter(latitude, longitude);
+        setMapZoom(13);
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        alert("Unable to retrieve your location");
+      }
+    );
   };
 
   return (
@@ -18,6 +38,14 @@ const Toolbar: React.FC = () => {
         title={sidebarOpen ? "Hide Sidebar" : "Show Radii"}
       >
         <Menu size={24} />
+      </button>
+
+      <button 
+        onClick={handleLocate}
+        className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
+        title="Zoom to Current Location"
+      >
+        <Locate size={24} />
       </button>
 
       <button 

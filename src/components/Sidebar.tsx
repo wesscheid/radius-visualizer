@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useStore } from '../store/useStore';
 import { Trash2, Eye, EyeOff, MapPin, Layers } from 'lucide-react';
 import { clsx } from 'clsx';
