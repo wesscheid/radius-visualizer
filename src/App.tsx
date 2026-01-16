@@ -7,7 +7,7 @@ import { auth } from './firebase';
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
-  const { addRadius, setMapCenter } = useStore();
+  const { addRadius, setMapCenter, setMapZoom } = useStore();
 
   const handleSearch = async () => {
     if (searchQuery.trim() === '') return;
