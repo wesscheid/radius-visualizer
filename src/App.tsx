@@ -25,6 +25,7 @@ function App() {
 
         addRadius(lat, lng, auth.currentUser?.uid);
         setMapCenter(lat, lng);
+        setMapZoom(13);
         setSearchQuery('');
       } else {
         alert('Location not found. Please try a different search.');

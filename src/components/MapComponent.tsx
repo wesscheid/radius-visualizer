@@ -16,22 +16,32 @@ L.Icon.Default.mergeOptions({
 
 const MapUpdater = () => {
   const map = useMap();
-  const { mapCenter } = useStore();
+  const { mapCenter, mapZoom } = useStore();
 
   useEffect(() => {
-    map.setView([mapCenter.lat, mapCenter.lng], map.getZoom());
-  }, [mapCenter, map]);
+    map.setView([mapCenter.lat, mapCenter.lng], mapZoom);
+  }, [mapCenter, mapZoom, map]);
 
   return null;
 };
 
 const MapEvents = () => {
-  const { addRadius } = useStore();
+  const { addRadius, setMapCenter, setMapZoom } = useStore();
   
   useMapEvents({
     click(e) {
       addRadius(e.latlng.lat, e.latlng.lng, auth.currentUser?.uid);
     },
+    moveend() {
+      const map = this;
+      const center = map.getCenter();
+      // Only sync if significant change to avoid loops
+      setMapCenter(center.lat, center.lng);
+    },
+    zoomend() {
+      const map = this;
+      setMapZoom(map.getZoom());
+    }
   });
 
   return null;
