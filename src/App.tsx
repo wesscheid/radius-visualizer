@@ -13,6 +13,26 @@ function App() {
   const handleSearch = async () => {
     if (searchQuery.trim() === '') return;
 
+    // Check for coordinates (Lat, Lng)
+    const coordinateRegex = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
+    const match = searchQuery.match(coordinateRegex);
+
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[3]);
+
+      if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        addRadius(lat, lng, auth.currentUser?.uid);
+        setMapCenter(lat, lng);
+        setMapZoom(13);
+        setSearchQuery('');
+        return;
+      } else {
+        alert('Invalid coordinates. Latitude must be between -90 and 90, Longitude between -180 and 180.');
+        return;
+      }
+    }
+
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
@@ -56,7 +76,7 @@ function App() {
         <div className="bg-white rounded-lg shadow-md flex items-center p-2 opacity-90 hover:opacity-100 transition-opacity">
            <input 
              type="text" 
-             placeholder="Search location and press Enter..." 
+             placeholder="Search location or enter 'Lat, Lng'..." 
              className="flex-1 bg-transparent border-none focus:ring-0 text-sm px-2 outline-none"
              value={searchQuery}
              onChange={(e) => setSearchQuery(e.target.value)}
