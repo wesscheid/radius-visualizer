@@ -297,6 +297,16 @@ const Sidebar: React.FC = () => {
             </div>
 
             <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Notes</label>
+              <textarea 
+                value={selectedRadius.notes || ''}
+                onChange={(e) => updateRadius(selectedRadius.id, { notes: e.target.value })}
+                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm min-h-[60px] resize-y"
+                placeholder="Add details about this location..."
+              />
+            </div>
+
+            <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Group</label>
               <select
                 value={selectedRadius.groupId || ''}

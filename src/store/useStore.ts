@@ -25,6 +25,7 @@ export interface Radius {
   userId?: string;
   groupId?: string | null;
   reliability?: number; // 0-100, for weighted trilateration
+  notes?: string;
 }
 
 export interface IntersectionPoint {
@@ -120,7 +121,8 @@ export const useStore = create<AppState>((set, get) => ({
       fill: true,
       userId,
       groupId: null,
-      reliability: 100
+      reliability: 100,
+      notes: ''
     };
 
     if (userId) {
