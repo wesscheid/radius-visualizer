@@ -42,10 +42,12 @@ const Toolbar: React.FC = () => {
   };
 
   return (
-    <div className="absolute bottom-6 left-6 flex flex-col gap-3 z-10">
+    <div className="absolute bottom-6 left-0 right-0 md:left-6 md:right-auto flex flex-row md:flex-col justify-center md:justify-start gap-4 md:gap-3 z-10 px-6 md:px-0 pointer-events-none md:pointer-events-auto">
+      {/* Wrapper to re-enable pointer events for buttons since container is pass-through on mobile */}
+      
       <button 
         onClick={toggleSidebar}
-        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
+        className="pointer-events-auto bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
         title={sidebarOpen ? "Hide Sidebar" : "Show Radii"}
       >
         <Menu size={24} />
@@ -53,7 +55,7 @@ const Toolbar: React.FC = () => {
 
       <button 
         onClick={handleLocate}
-        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
+        className="pointer-events-auto bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
         title="Zoom to Current Location"
       >
         <Locate size={24} />
@@ -61,7 +63,7 @@ const Toolbar: React.FC = () => {
       
       <button 
         onClick={toggleMeasurementMode}
-        className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-colors ${isMeasuring ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' : 'bg-white hover:bg-gray-50 text-gray-700'}`}
+        className={`pointer-events-auto w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-colors ${isMeasuring ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' : 'bg-white hover:bg-gray-50 text-gray-700'} hidden md:flex`}
         title="Measurement Tool"
       >
         <Ruler size={24} />
@@ -69,7 +71,7 @@ const Toolbar: React.FC = () => {
 
       <button 
         onClick={toggleIntersectionDisplay}
-        className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-colors ${showIntersections ? 'bg-orange-100 text-orange-600 border-2 border-orange-500' : 'bg-white hover:bg-gray-50 text-gray-700'}`}
+        className={`pointer-events-auto w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-colors ${showIntersections ? 'bg-orange-100 text-orange-600 border-2 border-orange-500' : 'bg-white hover:bg-gray-50 text-gray-700'} hidden md:flex`}
         title="Toggle Intersection Points"
       >
         <Target size={24} />
@@ -77,7 +79,7 @@ const Toolbar: React.FC = () => {
 
       <button 
         onClick={handleAddCenter}
-        className="bg-primary w-14 h-14 flex items-center justify-center rounded-full shadow-lg hover:bg-blue-600 text-white transition-colors"
+        className="pointer-events-auto bg-primary w-14 h-14 flex items-center justify-center rounded-full shadow-lg hover:bg-blue-600 text-white transition-colors"
         title="Add Radius at Center"
       >
         <Plus size={28} />
@@ -85,14 +87,14 @@ const Toolbar: React.FC = () => {
 
       {/* Placeholder for future features */}
       <button 
-        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden sm:block"
+        className="pointer-events-auto bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden md:flex"
         title="Change Map Layer"
       >
         <Map size={24} />
       </button>
 
       <button 
-        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden sm:block"
+        className="pointer-events-auto bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden md:flex"
         title="Share"
       >
         <Share2 size={24} />
