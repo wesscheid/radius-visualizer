@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import MapComponent from './components/MapComponent';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
+import TrilaterationLogic from './components/TrilaterationLogic';
 import { useStore } from './store/useStore';
 import { auth } from './firebase';
 
@@ -38,6 +39,9 @@ function App() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-gray-100">
+      {/* Logic Layers */}
+      <TrilaterationLogic />
+
       {/* Map Layer */}
       <div className="absolute inset-0 z-0">
         <MapComponent />

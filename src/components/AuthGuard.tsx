@@ -3,12 +3,12 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { useStore, Radius } from '../store/useStore';
+import { useStore, Radius, Group } from '../store/useStore';
 import { Loader2 } from 'lucide-react';
 
 export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, loading, error] = useAuthState(auth);
-  const { setRadii, setLoading } = useStore();
+  const { setRadii, setGroups, setLoading } = useStore();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -26,22 +26,41 @@ export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children })
   useEffect(() => {
     if (!user) {
       setRadii([]);
+      setGroups([]);
       return;
     }
 
     setLoading(true);
-    const q = query(collection(db, 'radii'), where('userId', '==', user.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    
+    // Sync Radii
+    const radiiQuery = query(collection(db, 'radii'), where('userId', '==', user.uid));
+    const unsubscribeRadii = onSnapshot(radiiQuery, (snapshot) => {
       const radiiData: Radius[] = [];
       snapshot.forEach((doc) => {
         radiiData.push(doc.data() as Radius);
       });
       setRadii(radiiData);
+    });
+
+    // Sync Groups
+    const groupsQuery = query(collection(db, 'groups'), where('userId', '==', user.uid));
+    const unsubscribeGroups = onSnapshot(groupsQuery, (snapshot) => {
+      const groupsData: Group[] = [];
+      snapshot.forEach((doc) => {
+        groupsData.push(doc.data() as Group);
+      });
+      setGroups(groupsData);
+      // We can turn off loading once the initial listeners attach, 
+      // but in real-time, "loading" is vague. 
+      // Simplification: Turn off loading after first radius sync (primary data).
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [user, setRadii, setLoading]);
+    return () => {
+      unsubscribeRadii();
+      unsubscribeGroups();
+    };
+  }, [user, setRadii, setGroups, setLoading]);
 
   if (loading || !user) {
     return (

@@ -1,10 +1,21 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { Menu, Plus, Map, Share2, Locate } from 'lucide-react';
+import { Menu, Plus, Map, Share2, Locate, Ruler, Target } from 'lucide-react';
 import { auth } from '../firebase';
 
 const Toolbar: React.FC = () => {
-  const { toggleSidebar, sidebarOpen, addRadius, mapCenter, setMapCenter, setMapZoom } = useStore();
+  const { 
+    toggleSidebar, 
+    sidebarOpen, 
+    addRadius, 
+    mapCenter, 
+    setMapCenter, 
+    setMapZoom, 
+    toggleMeasurementMode, 
+    isMeasuring,
+    showIntersections,
+    toggleIntersectionDisplay
+  } = useStore();
 
   const handleAddCenter = () => {
     // Helper to add a radius at the center of the screen
@@ -34,7 +45,7 @@ const Toolbar: React.FC = () => {
     <div className="absolute bottom-6 left-6 flex flex-col gap-3 z-10">
       <button 
         onClick={toggleSidebar}
-        className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
+        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
         title={sidebarOpen ? "Hide Sidebar" : "Show Radii"}
       >
         <Menu size={24} />
@@ -42,30 +53,46 @@ const Toolbar: React.FC = () => {
 
       <button 
         onClick={handleLocate}
-        className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
+        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors"
         title="Zoom to Current Location"
       >
         <Locate size={24} />
       </button>
+      
+      <button 
+        onClick={toggleMeasurementMode}
+        className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-colors ${isMeasuring ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' : 'bg-white hover:bg-gray-50 text-gray-700'}`}
+        title="Measurement Tool"
+      >
+        <Ruler size={24} />
+      </button>
+
+      <button 
+        onClick={toggleIntersectionDisplay}
+        className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-colors ${showIntersections ? 'bg-orange-100 text-orange-600 border-2 border-orange-500' : 'bg-white hover:bg-gray-50 text-gray-700'}`}
+        title="Toggle Intersection Points"
+      >
+        <Target size={24} />
+      </button>
 
       <button 
         onClick={handleAddCenter}
-        className="bg-primary p-4 rounded-full shadow-lg hover:bg-blue-600 text-white transition-colors"
+        className="bg-primary w-14 h-14 flex items-center justify-center rounded-full shadow-lg hover:bg-blue-600 text-white transition-colors"
         title="Add Radius at Center"
       >
-        <Plus size={24} />
+        <Plus size={28} />
       </button>
 
       {/* Placeholder for future features */}
       <button 
-        className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden sm:block"
+        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden sm:block"
         title="Change Map Layer"
       >
         <Map size={24} />
       </button>
 
       <button 
-        className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden sm:block"
+        className="bg-white w-12 h-12 flex items-center justify-center rounded-full shadow-lg hover:bg-gray-50 text-gray-700 transition-colors hidden sm:block"
         title="Share"
       >
         <Share2 size={24} />

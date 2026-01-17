@@ -2,10 +2,11 @@
 
 ## 🧠 Learnings & Actions
 
-*   **Structural Refactoring (2026-01-15):** Consolidated the project from a nested `web/` directory to the root level. All configuration files (`package.json`, `tailwind.config.js`, etc.) and the `google-cloud-sdk` are now in the root to ensure standard React and CLI tool compatibility.
-*   **Documentation Initialization:** Created a comprehensive documentation suite in `./docs/` covering architecture, standards, and deployment.
-*   **Operational Mode:** Activated "Proactive Mode"—I will autonomously leverage `gcloud`, extensions, and MCP tools to resolve tasks, noting significant actions here for persistence.
-*   **CLI Environment:** Verified `gcloud CLI (552.0.0)` is functional and accessible.
+*   **Structural Refactoring (2026-01-15):** Consolidated the project from a nested `web/` directory to the root level. All configuration files (`package.json`, `tailwind.config.js`, etc.) and the `google-cloud-sdk` are now in the root.
+*   **Documentation Initialization:** Created a comprehensive documentation suite in `./docs/`.
+*   **Data Persistence (2026-01-16):** Implemented Firebase Anonymous Authentication and Firestore synchronization. Data now persists across sessions without requiring a formal login.
+*   **Geolocation:** Added "Zoom to Current Location" functionality using the browser's Geolocation API.
+*   **Production Deployment:** Successfully deployed to Vercel with automatic CI/CD from the `main` branch.
 
 ---
 
@@ -13,14 +14,15 @@
 
 | Feature | Status | Notes |
 | :--- | :--- | :--- |
-| **Interactive Map** | ✅ Active | Powered by `@vis.gl/react-google-maps` |
-| **Radius Creation** | ✅ Active | Click map or Search to add points |
-| **Search & Geocoding** | ✅ Active | Google Maps Geocoder integration |
+| **Interactive Map** | ✅ Active | Powered by `react-leaflet` (OpenStreetMap/CartoDB) |
+| **Radius Creation** | ✅ Active | Click map or Toolbar button to add points |
+| **Search & Geocoding** | ✅ Active | Integrated with `useStore` |
 | **Radius Management** | ✅ Active | Sidebar for list view and individual controls |
-| **Real-time Editing** | ✅ Active | Drag & Resize directly on map (when selected) |
-| **State Management** | ✅ Active | Powered by `Zustand` for high performance |
+| **Real-time Editing** | ✅ Active | Draggable markers with synced state |
+| **State Management** | ✅ Active | Powered by `Zustand` with Firestore sync |
+| **Data Persistence** | ✅ Active | Firebase Anonymous Auth + Firestore |
+| **Geolocation** | ✅ Active | "Locate" button in toolbar |
 | **Overlap Detection** | ⏳ Planned | Visual crosshatch for intersections |
-| **Data Persistence** | ⏳ Planned | Firebase/Firestore integration |
 | **Export (KML/CSV)** | ⏳ Planned | Modal for file generation |
 
 ---
@@ -28,48 +30,52 @@
 ## 🛠 Current Tech Stack
 
 *   **Framework:** [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-*   **Mapping:** [@vis.gl/react-google-maps](https://visgl.github.io/react-google-maps/) (Official React components for Google Maps)
-*   **State:** [Zustand](https://zustand-demo.pmnd.rs/) (Lightweight, robust state management)
+*   **Mapping:** [React Leaflet](https://react-leaflet.js.org/) (Leaflet wrapper for React)
+*   **Database/Auth:** [Firebase](https://firebase.google.com/) (Firestore & Anonymous Auth)
+*   **State:** [Zustand](https://zustand-demo.pmnd.rs/)
 *   **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 *   **Icons:** [Lucide React](https://lucide.dev/)
-*   **Utilities:** `uuid` for unique identifiers, `clsx` & `tailwind-merge` for dynamic classes.
+*   **Deployment:** [Vercel](https://vercel.com/)
 
 ---
 
 ## 🏗 Project Structure
 
 ```text
-web/
+/
 ├── src/
-│   ├── components/      # MapComponent, Sidebar, Toolbar
-│   ├── store/           # useStore.ts (Zustand store)
-│   ├── utils/           # formatters (e.g., meters to miles)
-│   └── App.tsx          # Main layout & Search logic
-└── tailwind.config.js   # Custom styling configuration
+│   ├── components/      # MapComponent, Sidebar, Toolbar, AuthGuard
+│   ├── store/           # useStore.ts (Zustand + Firestore logic)
+│   ├── utils/           # formatters & helpers
+│   ├── firebase.ts      # Firebase configuration
+│   └── App.tsx          # App Entry & Layout
+├── public/              # Static assets
+├── tailwind.config.js   # Custom styling configuration
+└── firestore.rules      # Database security rules
 ```
 
 ---
 
 ## 🗺 Implementation Details
 
-### State Management (`zustand`)
-We use a centralized store in `web/src/store/useStore.ts` to manage:
-*   `radii`: List of all active radius points.
-*   `selectedRadiusId`: Currently active point for editing/focus.
-*   `mapCenter`/`zoom`: Synchronized map state.
+### State & Persistence
+We use **Zustand** for local state and **Firestore** for persistence.
+- **AuthGuard:** Automatically signs users in anonymously.
+- **Real-time Sync:** `onSnapshot` in `AuthGuard` keeps the Zustand store in sync with Firestore.
+- **Optimistic Updates:** Store actions update Firestore, and the listener handles the state refresh.
 
 ### Map Interaction
-*   **Adding Points:** Clicking anywhere on the map triggers `addRadius` at that coordinate.
-*   **Editing:** When a radius is selected, it becomes `editable` and `draggable`. Google Maps handles the imperative updates, which we sync back to Zustand via event listeners (`radius_changed`, `dragend`).
+- **Leaflet Integration:** Switched from Google Maps to Leaflet/OpenStreetMap for better flexibility and cost-effectiveness.
+- **Zoom to Location:** Uses `navigator.geolocation` to set the `mapCenter` in the store.
 
 ---
 
 ## 📝 Roadmap & Next Steps
 
-1.  **Overlap Logic:** Implement a calculation to detect intersecting circles and apply a custom SVG pattern or highlight.
+1.  **Overlap Logic:** Implement a calculation to detect intersecting circles and apply a custom SVG pattern.
 2.  **Units Toggle:** Add ability to switch between Miles and Kilometers.
-3.  **Persistence:** Connect to Firebase to allow saving "Sessions" or "Projects".
-4.  **UI Polish:** Implement the "Floating Toolbar" from the original design prompt (Bottom Left actions).
+3.  **Account Upgrading:** Allow anonymous users to link a Google account to keep their data permanently across devices.
+4.  **Export:** Add KML/CSV export for GIS compatibility.
 
 ---
 
@@ -77,22 +83,21 @@ We use a centralized store in `web/src/store/useStore.ts` to manage:
 
 ### Prerequisites
 *   Node.js (LTS recommended)
-*   Google Maps API Key (configured in `.env`)
+*   Firebase Project (configured in `src/firebase.ts`)
 
 ### Running the Web App
-1.  Navigate to the web directory:
-    ```bash
-    cd web
-    ```
-2.  Install dependencies (Critical if you see 'react-scripts not found'):
+1.  Install dependencies:
     ```bash
     npm install
     ```
-3.  Start the development server:
+2.  Start the development server:
     ```bash
     npm start
     ```
 
-### Troubleshooting
-*   **'react-scripts' is not recognized:** Ensure you have run `npm install` inside the `web/` directory. If using WSL, ensure your node environment is properly synced.
-*   **Map not loading:** Check the `.env` file for a valid `REACT_APP_GOOGLE_MAPS_API_KEY`.
+### Deployment
+The project is connected to Vercel. Pushing to `main` triggers a production build.
+To manually deploy:
+```bash
+npx vercel --prod
+```
