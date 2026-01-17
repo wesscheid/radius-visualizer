@@ -310,6 +310,43 @@ const Sidebar: React.FC = () => {
               </select>
             </div>
 
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Latitude</label>
+                <input 
+                  type="number"
+                  step="any" 
+                  min="-90"
+                  max="90"
+                  value={selectedRadius.lat}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val >= -90 && val <= 90) {
+                      updateRadius(selectedRadius.id, { lat: val });
+                    }
+                  }}
+                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm font-mono"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Longitude</label>
+                <input 
+                  type="number"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  value={selectedRadius.lng}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val >= -180 && val <= 180) {
+                      updateRadius(selectedRadius.id, { lng: val });
+                    }
+                  }}
+                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:border-primary text-sm font-mono"
+                />
+              </div>
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium text-gray-500">Radius (Imperial)</label>
