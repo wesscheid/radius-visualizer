@@ -116,15 +116,8 @@ const Sidebar: React.FC = () => {
       
       if (error.code === 'auth/credential-already-in-use') {
          if (window.confirm("This Google account is already associated with another user. Do you want to sign in with this account instead? (Note: Current temporary data will be lost if not saved)")) {
-            try {
-              await signInWithPopup(auth, googleProvider);
-              // signInWithPopup changes the user, which triggers useEffect
-            } catch (signInError: any) {
-              console.error("Error signing in (FULL):", signInError);
-              if (confirm("Sign-in popup failed. Try redirecting?")) {
-                 signInWithRedirect(auth, googleProvider);
-              }
-            }
+            // Use redirect immediately for the account switch to avoid popup issues
+            signInWithRedirect(auth, googleProvider);
          }
       } else {
          // Fallback to Redirect if popup fails (e.g. COOP)
