@@ -5,7 +5,7 @@ import { clsx } from 'clsx';
 import { formatRadius, metersToImperial, imperialToMeters, downloadFile, convertToCSV, convertToGeoJSON } from '../utils/format';
 import { auth, googleProvider } from '../firebase';
 import { distance } from '../utils/trilateration';
-import { linkWithPopup, signInWithPopup, User, GoogleAuthProvider } from 'firebase/auth';
+import { linkWithPopup, signInWithPopup, linkWithRedirect, signInWithRedirect, getRedirectResult, User, GoogleAuthProvider } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
 const Sidebar: React.FC = () => {
@@ -36,6 +36,29 @@ const Sidebar: React.FC = () => {
       setIsGuest(user.isAnonymous);
     }
   }, [user]);
+
+  // Handle Redirect Result on Mount
+  React.useEffect(() => {
+    getRedirectResult(auth).then((result) => {
+      if (result) {
+        // User just returned from a redirect sign-in/link
+        console.log("Redirect result:", result);
+        if (result.user) {
+           setIsGuest(result.user.isAnonymous);
+           alert("Successfully signed in/linked via redirect!");
+        }
+      }
+    }).catch((error) => {
+      console.error("Redirect Error:", error);
+      if (error.code === 'auth/credential-already-in-use') {
+         if (window.confirm("Account already exists. Switch to it? (Data will be lost)")) {
+            signInWithRedirect(auth, googleProvider);
+         }
+      } else {
+         alert("Redirect Action Failed: " + error.message);
+      }
+    });
+  }, []);
 
   const [newGroupName, setNewGroupName] = useState('');
   const [showResiduals, setShowResiduals] = useState(false);
@@ -98,11 +121,20 @@ const Sidebar: React.FC = () => {
               // signInWithPopup changes the user, which triggers useEffect
             } catch (signInError: any) {
               console.error("Error signing in (FULL):", signInError);
-              alert("Failed to sign in: " + signInError.message);
+              if (confirm("Sign-in popup failed. Try redirecting?")) {
+                 signInWithRedirect(auth, googleProvider);
+              }
             }
          }
       } else {
-         alert("Failed to link account: " + error.message);
+         // Fallback to Redirect if popup fails (e.g. COOP)
+         if (confirm("Popup failed (" + error.message + "). Try redirecting? (Page will reload)")) {
+            try {
+              await linkWithRedirect(user, googleProvider);
+            } catch (redirErr: any) {
+              alert("Redirect failed to start: " + redirErr.message);
+            }
+         }
       }
     }
   };
