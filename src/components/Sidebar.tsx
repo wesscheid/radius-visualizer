@@ -67,6 +67,9 @@ const Sidebar: React.FC = () => {
     if (!user) return;
     try {
       await linkWithPopup(user, googleProvider);
+      // Force token refresh to update claims and UI
+      await user.reload();
+      await user.getIdToken(true);
       alert("Account successfully linked! You can now sign in with Google on other devices to access your data.");
     } catch (error: any) {
       console.error("Error linking account:", error);
