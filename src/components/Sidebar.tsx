@@ -28,6 +28,15 @@ const Sidebar: React.FC = () => {
   } = useStore();
 
   const [user] = useAuthState(auth);
+  const [isGuest, setIsGuest] = useState(true);
+
+  // Sync isGuest with user state whenever user changes
+  React.useEffect(() => {
+    if (user) {
+      setIsGuest(user.isAnonymous);
+    }
+  }, [user]);
+
   const [newGroupName, setNewGroupName] = useState('');
   const [showResiduals, setShowResiduals] = useState(false);
 
@@ -70,6 +79,12 @@ const Sidebar: React.FC = () => {
       // Force token refresh to update claims and UI
       await user.reload();
       await user.getIdToken(true);
+      
+      // Manually update local state to reflect the change immediately
+      if (auth.currentUser) {
+        setIsGuest(auth.currentUser.isAnonymous);
+      }
+      
       alert("Account successfully linked! You can now sign in with Google on other devices to access your data.");
     } catch (error: any) {
       console.error("Error linking account:", error);
@@ -77,6 +92,7 @@ const Sidebar: React.FC = () => {
          if (window.confirm("This Google account is already associated with another user. Do you want to sign in with this account instead? (Note: Current temporary data will be lost if not saved)")) {
             try {
               await signInWithPopup(auth, googleProvider);
+              // signInWithPopup changes the user, which triggers useEffect
             } catch (signInError: any) {
               console.error("Error signing in:", signInError);
               alert("Failed to sign in: " + signInError.message);
@@ -180,16 +196,16 @@ const Sidebar: React.FC = () => {
                   <span className="text-xs font-bold text-dark-text-secondary uppercase">Data & Account</span>
                   {user && <span className="text-[10px] text-gray-500 font-mono">{user.uid.slice(0, 5)}...</span>}
                 </div>
-                {user?.isAnonymous && (
+                {isGuest && (
                   <span className="text-[10px] bg-yellow-900/30 text-yellow-500 px-2 py-0.5 rounded border border-yellow-800">Guest</span>
                 )}
-                {!user?.isAnonymous && user && (
+                {!isGuest && user && (
                   <span className="text-[10px] bg-green-900/30 text-green-400 px-2 py-0.5 rounded border border-green-800">Synced</span>
                 )}
              </div>
 
              <div className="space-y-2">
-                {user?.isAnonymous && (
+                {isGuest && (
                   <button 
                     onClick={handleLinkAccount}
                     className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium transition-colors"
@@ -198,7 +214,7 @@ const Sidebar: React.FC = () => {
                   </button>
                 )}
 
-                {!user?.isAnonymous && (
+                {!isGuest && (
                   <button 
                     onClick={() => auth.signOut()}
                     className="w-full flex items-center justify-center gap-2 bg-dark-surface hover:bg-gray-700 text-dark-text-primary border border-dark-border py-2 rounded text-sm font-medium transition-colors"
