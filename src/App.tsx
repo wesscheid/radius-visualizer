@@ -62,7 +62,7 @@ function App() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-gray-100">
+    <div className="relative w-screen h-[100dvh] overflow-hidden bg-dark-bg">
       {/* Logic Layers */}
       <TrilaterationLogic />
 
@@ -77,11 +77,11 @@ function App() {
       
       {/* Top Search Bar */}
       <div className="absolute top-4 left-0 right-0 px-4 md:left-1/2 md:right-auto md:transform md:-translate-x-1/2 md:w-full md:max-w-md z-10 flex justify-end md:block pointer-events-none">
-        <div className={`pointer-events-auto bg-white rounded-lg shadow-md flex items-center p-2 opacity-90 hover:opacity-100 transition-all duration-300 ${mobileSearchOpen ? 'w-full' : 'w-12 h-12 md:w-full'}`}>
+        <div className={`pointer-events-auto bg-dark-surface rounded-lg shadow-md flex items-center p-2 opacity-90 hover:opacity-100 transition-all duration-300 border border-dark-border ${mobileSearchOpen ? 'w-full' : 'w-12 h-12 md:w-full'}`}>
            
            {/* Mobile Search Icon (when collapsed) */}
            <button 
-             className={`md:hidden p-1 text-gray-600 ${mobileSearchOpen ? 'hidden' : 'block'}`}
+             className={`md:hidden p-1 text-dark-text-secondary ${mobileSearchOpen ? 'hidden' : 'block'}`}
              onClick={() => setMobileSearchOpen(true)}
            >
              <Search size={24} />
@@ -92,7 +92,7 @@ function App() {
              <input 
                type="text" 
                placeholder="Search location..." 
-               className="flex-1 bg-transparent border-none focus:ring-0 text-sm px-2 outline-none min-w-0"
+               className="flex-1 bg-transparent border-none focus:ring-0 text-sm px-2 outline-none min-w-0 text-dark-text-primary placeholder-gray-500"
                value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
                onKeyDown={(e) => {
@@ -105,12 +105,12 @@ function App() {
              
              {/* Close/Search Action for Mobile */}
              {mobileSearchOpen && (
-                <button onClick={() => setMobileSearchOpen(false)} className="md:hidden text-gray-400 p-1">
+                <button onClick={() => setMobileSearchOpen(false)} className="md:hidden text-dark-text-secondary p-1">
                   <X size={20} />
                 </button>
              )}
 
-             <div className="hidden md:block text-xs text-gray-400 px-2 border-l border-gray-200 whitespace-nowrap">
+             <div className="hidden md:block text-xs text-dark-text-secondary px-2 border-l border-dark-border whitespace-nowrap">
                 Prototype
              </div>
            </div>

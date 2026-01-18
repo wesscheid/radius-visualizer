@@ -9,12 +9,10 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8fafc; /* Slate 50 */
+  background-color: #1a1a1a; /* Dark BG */
   overflow: hidden; /* Prevent scrolling for map app */
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 code {

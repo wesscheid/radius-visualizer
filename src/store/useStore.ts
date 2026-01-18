@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 export interface Group {
   id: string;
@@ -66,6 +66,7 @@ interface AppState {
   addGroup: (name: string, color: string, userId?: string) => Promise<void>;
   updateGroup: (id: string, updates: Partial<Group>) => Promise<void>;
   removeGroup: (id: string) => Promise<void>;
+  clearAllRadii: () => Promise<void>;
   
   selectRadius: (id: string | null) => void;
   setMapCenter: (lat: number, lng: number) => void;
@@ -192,6 +193,35 @@ export const useStore = create<AppState>((set, get) => ({
         groups: state.groups.filter((g) => g.id !== id),
       }));
     }
+  },
+
+  clearAllRadii: async () => {
+    const { radii, groups } = get();
+    const batch = writeBatch(db);
+    let hasUpdates = false;
+
+    // Delete all radii from Firestore if they have a userId
+    radii.forEach(r => {
+      if (r.userId) {
+        batch.delete(doc(db, 'radii', r.id));
+        hasUpdates = true;
+      }
+    });
+
+    // Delete all groups from Firestore if they have a userId
+    groups.forEach(g => {
+      if (g.userId) {
+        batch.delete(doc(db, 'groups', g.id));
+        hasUpdates = true;
+      }
+    });
+
+    if (hasUpdates) {
+      await batch.commit();
+    }
+    
+    // Clear local state (optimistic update, though AuthGuard listener will ultimately sync this)
+    set({ radii: [], groups: [], selectedRadiusId: null });
   },
 
   selectRadius: (id) => set({ selectedRadiusId: id }),
