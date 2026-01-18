@@ -87,14 +87,17 @@ const Sidebar: React.FC = () => {
       
       alert("Account successfully linked! You can now sign in with Google on other devices to access your data.");
     } catch (error: any) {
-      console.error("Error linking account:", error);
+      console.error("Error linking account (FULL):", error);
+      console.log("Error code:", error.code);
+      console.log("Error message:", error.message);
+      
       if (error.code === 'auth/credential-already-in-use') {
          if (window.confirm("This Google account is already associated with another user. Do you want to sign in with this account instead? (Note: Current temporary data will be lost if not saved)")) {
             try {
               await signInWithPopup(auth, googleProvider);
               // signInWithPopup changes the user, which triggers useEffect
             } catch (signInError: any) {
-              console.error("Error signing in:", signInError);
+              console.error("Error signing in (FULL):", signInError);
               alert("Failed to sign in: " + signInError.message);
             }
          }
