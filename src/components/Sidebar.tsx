@@ -117,7 +117,13 @@ const Sidebar: React.FC = () => {
       if (error.code === 'auth/credential-already-in-use') {
          if (window.confirm("This Google account is already associated with another user. Do you want to sign in with this account instead? (Note: Current temporary data will be lost if not saved)")) {
             // Use redirect immediately for the account switch to avoid popup issues
-            signInWithRedirect(auth, googleProvider);
+            console.log("Attempting signInWithRedirect...");
+            try {
+              await signInWithRedirect(auth, googleProvider);
+            } catch (redirectError: any) {
+              console.error("signInWithRedirect failed:", redirectError);
+              alert("Failed to start redirect: " + redirectError.message);
+            }
          }
       } else {
          // Fallback to Redirect if popup fails (e.g. COOP)
