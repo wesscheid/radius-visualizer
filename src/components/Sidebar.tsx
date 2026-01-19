@@ -33,7 +33,10 @@ const Sidebar: React.FC = () => {
   // Sync isGuest with user state whenever user changes
   React.useEffect(() => {
     if (user) {
+      console.log("Auth State Changed:", { uid: user.uid, isAnonymous: user.isAnonymous, email: user.email });
       setIsGuest(user.isAnonymous);
+    } else {
+      console.log("Auth State: No User");
     }
   }, [user]);
 
