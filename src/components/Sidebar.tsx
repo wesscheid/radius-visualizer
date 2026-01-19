@@ -127,7 +127,7 @@ const Sidebar: React.FC = () => {
          }
       } else {
          // Fallback to Redirect if popup fails (e.g. COOP)
-         if (confirm("Popup failed (" + error.message + "). Try redirecting? (Page will reload)")) {
+         if (window.confirm("Popup failed (" + error.message + "). Try redirecting? (Page will reload)")) {
             try {
               await linkWithRedirect(user, googleProvider);
             } catch (redirErr: any) {
@@ -253,7 +253,7 @@ const Sidebar: React.FC = () => {
                     </button>
                     <button 
                       onClick={async () => {
-                         if (confirm("Sign in to another account? Current local data will be LOST.")) {
+                         if (window.confirm("Sign in to another account? Current local data will be LOST.")) {
                             await signInWithRedirect(auth, googleProvider);
                          }
                       }}
