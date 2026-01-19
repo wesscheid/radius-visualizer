@@ -16,38 +16,32 @@ export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children })
       // If firebase-hooks is still loading, do nothing yet
       if (loading) return;
 
-      // If we already have a user, we are good. Stop checking redirect.
-      if (user) {
+      // If we have a non-anonymous user, we are definitely logged in.
+      if (user && !user.isAnonymous) {
         setCheckingRedirect(false);
         return;
       }
 
-      console.log("AuthGuard: No user found. Checking for redirect result...");
+      console.log("AuthGuard: Checking for redirect result (User is " + (user ? "Guest" : "Null") + ")...");
       
       try {
-        // Check if we are returning from a redirect flow (Google Login)
         const redirectResult = await getRedirectResult(auth);
-        
         if (redirectResult && redirectResult.user) {
            console.log("AuthGuard: Restored user from redirect:", redirectResult.user.uid);
-           // User restored! useAuthState will update automatically in the next render cycle.
-           // We set checkingRedirect to false, but we might want to keep it true until 'user' is populated?
-           // Actually, if we return here, the 'user' dependency will trigger this effect again,
-           // and the 'if (user)' block above will handle it.
+           setCheckingRedirect(false);
            return; 
-        } else {
-           console.log("AuthGuard: No redirect result found.");
         }
       } catch (e: any) {
         console.error("AuthGuard: Redirect check error:", e);
-        if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
-           // If it's a real error, we might want to show it? 
-           // For now, log it and proceed to anonymous auth.
-        }
       }
 
-      // If we reached here: No User AND No Redirect Result.
-      // Now it is safe to sign in anonymously.
+      // If we have a guest already, we're done (redirect result was null)
+      if (user && user.isAnonymous) {
+        setCheckingRedirect(false);
+        return;
+      }
+
+      // No user at all, and no redirect result found.
       try {
         console.log("AuthGuard: creating new anonymous session...");
         await signInAnonymously(auth);
