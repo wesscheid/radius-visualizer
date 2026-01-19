@@ -96,6 +96,25 @@ const Sidebar: React.FC = () => {
   };
 
   const handleLinkAccount = async () => {
+    // SMART LOGIN STRATEGY:
+    // 1. If the user has NO data locally, they probably just want to log in to see their existing data. -> DIRECT SIGN IN
+    // 2. If the user HAS data locally, they probably want to save it to an account. -> TRY LINKING
+    
+    const hasLocalData = radii.length > 0 || groups.length > 0;
+
+    if (!hasLocalData) {
+      console.log("No local data detected. Proceeding to direct sign-in.");
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return; // Redirecting...
+      } catch (error: any) {
+        console.error("Direct sign-in failed:", error);
+        alert("Sign-in failed: " + error.message);
+        return;
+      }
+    }
+
+    // Existing Logic (For when user HAS data to save)
     if (!user) return;
     try {
       await linkWithPopup(user, googleProvider);
