@@ -228,7 +228,11 @@ const Sidebar: React.FC = () => {
              <div className="flex items-center justify-between mb-2">
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-dark-text-secondary uppercase">Data & Account</span>
-                  {user && <span className="text-[10px] text-gray-500 font-mono">{user.uid.slice(0, 5)}...</span>}
+                  {user && (
+                    <span className="text-[10px] text-gray-500 font-mono" title={user.uid}>
+                      {user.displayName || user.email || user.uid.slice(0, 5) + '...'}
+                    </span>
+                  )}
                 </div>
                 {isGuest && (
                   <span className="text-[10px] bg-yellow-900/30 text-yellow-500 px-2 py-0.5 rounded border border-yellow-800">Guest</span>
