@@ -96,25 +96,6 @@ const Sidebar: React.FC = () => {
   };
 
   const handleLinkAccount = async () => {
-    // SMART LOGIN STRATEGY:
-    // 1. If the user has NO data locally, they probably just want to log in to see their existing data. -> DIRECT SIGN IN
-    // 2. If the user HAS data locally, they probably want to save it to an account. -> TRY LINKING
-    
-    const hasLocalData = radii.length > 0 || groups.length > 0;
-
-    if (!hasLocalData) {
-      console.log("No local data detected. Proceeding to direct sign-in.");
-      try {
-        await signInWithRedirect(auth, googleProvider);
-        return; // Redirecting...
-      } catch (error: any) {
-        console.error("Direct sign-in failed:", error);
-        alert("Sign-in failed: " + error.message);
-        return;
-      }
-    }
-
-    // Existing Logic (For when user HAS data to save)
     if (!user) return;
     try {
       await linkWithPopup(user, googleProvider);
@@ -262,12 +243,39 @@ const Sidebar: React.FC = () => {
              </div>
 
              <div className="space-y-2">
-                {isGuest && (
+                {isGuest && (radii.length > 0 || groups.length > 0) && (
+                  <>
+                    <button 
+                      onClick={handleLinkAccount}
+                      className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium transition-colors"
+                    >
+                      <Save size={16} /> Save Data (Link Account)
+                    </button>
+                    <button 
+                      onClick={async () => {
+                         if (confirm("Sign in to another account? Current local data will be LOST.")) {
+                            await signInWithRedirect(auth, googleProvider);
+                         }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 bg-dark-surface hover:bg-gray-700 text-dark-text-secondary border border-dark-border py-2 rounded text-sm font-medium transition-colors"
+                    >
+                      <LogOut size={16} /> Sign In (Discard Data)
+                    </button>
+                  </>
+                )}
+
+                {isGuest && radii.length === 0 && groups.length === 0 && (
                   <button 
-                    onClick={handleLinkAccount}
+                    onClick={async () => {
+                      try {
+                        await signInWithRedirect(auth, googleProvider);
+                      } catch (e: any) {
+                        alert("Login failed: " + e.message);
+                      }
+                    }}
                     className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium transition-colors"
                   >
-                    <Save size={16} /> Save Data (Sign In)
+                    <Save size={16} /> Sign In
                   </button>
                 )}
 
