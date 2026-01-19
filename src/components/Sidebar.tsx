@@ -40,29 +40,6 @@ const Sidebar: React.FC = () => {
     }
   }, [user]);
 
-  // Handle Redirect Result on Mount
-  React.useEffect(() => {
-    getRedirectResult(auth).then((result) => {
-      if (result) {
-        // User just returned from a redirect sign-in/link
-        console.log("Redirect result:", result);
-        if (result.user) {
-           setIsGuest(result.user.isAnonymous);
-           alert("Successfully signed in/linked via redirect!");
-        }
-      }
-    }).catch((error) => {
-      console.error("Redirect Error:", error);
-      if (error.code === 'auth/credential-already-in-use') {
-         if (window.confirm("Account already exists. Switch to it? (Data will be lost)")) {
-            signInWithRedirect(auth, googleProvider);
-         }
-      } else {
-         alert("Redirect Action Failed: " + error.message);
-      }
-    });
-  }, []);
-
   const [newGroupName, setNewGroupName] = useState('');
   const [showResiduals, setShowResiduals] = useState(false);
 
