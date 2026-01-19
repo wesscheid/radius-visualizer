@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../firebase';
-import { signInAnonymously } from 'firebase/auth';
+import { signInAnonymously, getRedirectResult } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useStore, Radius, Group } from '../store/useStore';
 import { Loader2 } from 'lucide-react';
@@ -14,6 +14,19 @@ export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children })
     const initAuth = async () => {
       if (!loading && !user) {
         try {
+          // Check if we are returning from a redirect flow FIRST
+          const redirectResult = await getRedirectResult(auth);
+          if (redirectResult && redirectResult.user) {
+             console.log("Restored user from redirect:", redirectResult.user.uid);
+             return; // User is restored, don't sign in anonymously
+          }
+        } catch (e) {
+          console.log("No redirect result or error:", e);
+        }
+
+        // Only if no redirect user found, then sign in anonymously
+        try {
+          console.log("No active user or redirect found. Signing in anonymously...");
           await signInAnonymously(auth);
         } catch (err) {
           console.error("Anonymous auth failed:", err);
