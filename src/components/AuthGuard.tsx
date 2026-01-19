@@ -12,19 +12,22 @@ export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children })
 
   useEffect(() => {
     const initAuth = async () => {
+      console.log("AuthGuard Init:", { loading, user: user?.uid });
+      
       if (!loading && !user) {
         try {
-          // Check if we are returning from a redirect flow FIRST
+          console.log("Checking getRedirectResult...");
           const redirectResult = await getRedirectResult(auth);
+          console.log("getRedirectResult:", redirectResult);
+          
           if (redirectResult && redirectResult.user) {
              console.log("Restored user from redirect:", redirectResult.user.uid);
-             return; // User is restored, don't sign in anonymously
+             return; 
           }
         } catch (e) {
           console.log("No redirect result or error:", e);
         }
 
-        // Only if no redirect user found, then sign in anonymously
         try {
           console.log("No active user or redirect found. Signing in anonymously...");
           await signInAnonymously(auth);
