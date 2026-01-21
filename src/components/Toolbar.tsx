@@ -14,7 +14,9 @@ const Toolbar: React.FC = () => {
     toggleMeasurementMode, 
     isMeasuring,
     showIntersections,
-    toggleIntersectionDisplay
+    toggleIntersectionDisplay,
+    setGeolocationDenied,
+    setShowGeolocationWarning
   } = useStore();
 
   const handleAddCenter = () => {
@@ -24,7 +26,8 @@ const Toolbar: React.FC = () => {
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser");
+      setGeolocationDenied(true);
+      setShowGeolocationWarning(true);
       return;
     }
 
@@ -36,7 +39,7 @@ const Toolbar: React.FC = () => {
       },
       (error) => {
         console.error("Error getting location:", error);
-        alert("Unable to retrieve your location");
+        setShowGeolocationWarning(true);
       }
     );
   };

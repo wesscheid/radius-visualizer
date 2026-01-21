@@ -8,6 +8,7 @@ export interface Group {
   name: string;
   color: string;
   visible: boolean;
+  showAnalysis?: boolean;
   userId?: string;
 }
 
@@ -47,6 +48,8 @@ interface AppState {
   mapZoom: number;
   sidebarOpen: boolean;
   loading: boolean;
+  geolocationDenied: boolean;
+  showGeolocationWarning: boolean;
   
   // Measurement Tool State
   isMeasuring: boolean;
@@ -55,6 +58,7 @@ interface AppState {
   // Trilateration State
   intersections: IntersectionPoint[];
   showIntersections: boolean;
+  showUngroupedAnalysis: boolean;
 
   // Actions
   setRadii: (radii: Radius[]) => void;
@@ -82,6 +86,10 @@ interface AppState {
   // Trilateration Actions
   setIntersections: (points: IntersectionPoint[]) => void;
   toggleIntersectionDisplay: () => void;
+  toggleGroupAnalysis: (groupId: string) => void;
+  toggleUngroupedAnalysis: () => void;
+  setGeolocationDenied: (denied: boolean) => void;
+  setShowGeolocationWarning: (show: boolean) => void;
 }
 
 const DEFAULT_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'];
@@ -94,12 +102,15 @@ export const useStore = create<AppState>((set, get) => ({
   mapZoom: 10,
   sidebarOpen: true,
   loading: false,
+  geolocationDenied: false,
+  showGeolocationWarning: false,
   
   isMeasuring: false,
   measurementPoints: [],
   
   intersections: [],
   showIntersections: true,
+  showUngroupedAnalysis: false,
 
   setRadii: (radii) => set({ radii }),
   setGroups: (groups) => set({ groups }),
@@ -163,6 +174,7 @@ export const useStore = create<AppState>((set, get) => ({
       name,
       color,
       visible: true,
+      showAnalysis: false,
       userId
     };
 
@@ -185,14 +197,27 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   removeGroup: async (id) => {
-    const group = get().groups.find(g => g.id === id);
+    const { groups, radii } = get();
+    const group = groups.find(g => g.id === id);
+    const groupRadii = radii.filter(r => r.groupId === id);
+    
     if (group?.userId) {
-      await deleteDoc(doc(db, 'groups', id));
-    } else {
-      set((state) => ({
-        groups: state.groups.filter((g) => g.id !== id),
-      }));
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'groups', id));
+      
+      // Update all associated radii to be ungrouped
+      groupRadii.forEach(r => {
+        batch.update(doc(db, 'radii', r.id), { groupId: null });
+      });
+      
+      await batch.commit();
     }
+    
+    set((state) => ({
+      groups: state.groups.filter((g) => g.id !== id),
+      // Move orphaned radii to ungrouped in local state
+      radii: state.radii.map(r => r.groupId === id ? { ...r, groupId: null } : r)
+    }));
   },
 
   clearAllRadii: async () => {
@@ -247,4 +272,13 @@ export const useStore = create<AppState>((set, get) => ({
 
   setIntersections: (intersections) => set({ intersections }),
   toggleIntersectionDisplay: () => set((state) => ({ showIntersections: !state.showIntersections })),
+
+  toggleGroupAnalysis: (groupId: string) => set((state) => ({
+    groups: state.groups.map(g => g.id === groupId ? { ...g, showAnalysis: !g.showAnalysis } : g)
+  })),
+
+  toggleUngroupedAnalysis: () => set((state) => ({ showUngroupedAnalysis: !state.showUngroupedAnalysis })),
+  
+  setGeolocationDenied: (denied: boolean) => set({ geolocationDenied: denied }),
+  setShowGeolocationWarning: (show) => set({ showGeolocationWarning: show }),
 }));

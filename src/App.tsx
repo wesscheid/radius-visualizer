@@ -3,9 +3,11 @@ import MapComponent from './components/MapComponent';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import TrilaterationLogic from './components/TrilaterationLogic';
+import GeolocationWarning from './components/GeolocationWarning';
 import { useStore } from './store/useStore';
 import { auth } from './firebase';
 import { Search, X } from 'lucide-react';
+import { parseLocationString } from './utils/locationParser';
 
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,14 +17,11 @@ function App() {
   const handleSearch = async () => {
     if (searchQuery.trim() === '') return;
 
-    // Check for coordinates (Lat, Lng)
-    const coordinateRegex = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/;
-    const match = searchQuery.match(coordinateRegex);
+    // Try parsing as coordinates or special formats first
+    const parsed = parseLocationString(searchQuery);
 
-    if (match) {
-      const lat = parseFloat(match[1]);
-      const lng = parseFloat(match[3]);
-
+    if (parsed) {
+      const { lat, lng } = parsed;
       if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
         addRadius(lat, lng, auth.currentUser?.uid);
         setMapCenter(lat, lng);
@@ -30,12 +29,10 @@ function App() {
         setSearchQuery('');
         setMobileSearchOpen(false);
         return;
-      } else {
-        alert('Invalid coordinates. Latitude must be between -90 and 90, Longitude between -180 and 180.');
-        return;
       }
     }
 
+    // If not coordinates, try geocoding
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`
@@ -53,11 +50,11 @@ function App() {
         setSearchQuery('');
         setMobileSearchOpen(false);
       } else {
-        alert('Location not found. Please try a different search.');
+        window.alert('Location not found. Please try a different search.');
       }
     } catch (error) {
       console.error('Search error:', error);
-      alert('Search failed. Please try again later.');
+      window.alert('Search failed. Please try again later.');
     }
   };
 
@@ -116,6 +113,7 @@ function App() {
            </div>
         </div>
       </div>
+      <GeolocationWarning />
     </div>
   );
 }

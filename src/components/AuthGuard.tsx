@@ -12,9 +12,15 @@ export const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children })
 
   useEffect(() => {
     const initAuth = async () => {
-      if (!loading && !user) {
+      // Wait a brief moment to let existing session restore
+      if (loading) return;
+      
+      if (!user) {
+        // Only sign in anonymously if there's no user AND no ongoing auth operation
+        // Firebase usually restores the session from local storage automatically.
+        // If it doesn't restore after 'loading' is false, then we sign in anonymously.
         try {
-          console.log("AuthGuard: No user found. Signing in anonymously...");
+          console.log("AuthGuard: No user found after loading. Signing in anonymously...");
           await signInAnonymously(auth);
         } catch (err) {
           console.error("Anonymous auth failed:", err);
