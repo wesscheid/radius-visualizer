@@ -84,13 +84,48 @@ export const parseLocationString = (input: string): ParsedLocation | null => {
   const decimalRegex = /\(?\s*(-?\d+(?:\.\d+)?)\s*[\u00B0\u00BA]?\s*[,;]\s*(-?\d+(?:\.\d+)?)\s*[\u00B0\u00BA]?\s*\)?/;
   const decimalMatch = input.match(decimalRegex);
   if (decimalMatch) {
-    return {
-      lat: parseFloat(decimalMatch[1]),
-      lng: parseFloat(decimalMatch[2])
-    };
+    const lat = parseFloat(decimalMatch[1]);
+    const lng = parseFloat(decimalMatch[2]);
+    if (isValidLatLng(lat, lng)) return { lat, lng };
   }
 
-  // 5. If it looks like a Plus Code (has a '+' with alphanumeric around it)
+  // 6. DMS Format: 29° 58' 40.5" N, 90° 03' 55.4" W
+  const dmsRegex = /(\d+)\s*[\u00B0\u00BA]\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"?\s*([NS])\s*[,/]?\s*(\d+)\s*[\u00B0\u00BA]\s*(\d+)\s*'\s*(\d+(?:\.\d+)?)\s*"?\s*([EW])/i;
+  const dmsMatch = input.match(dmsRegex);
+  if (dmsMatch) {
+    const latDeg = parseFloat(dmsMatch[1]);
+    const latMin = parseFloat(dmsMatch[2]);
+    const latSec = parseFloat(dmsMatch[3]);
+    const latDir = dmsMatch[4].toUpperCase();
+    
+    const lngDeg = parseFloat(dmsMatch[5]);
+    const lngMin = parseFloat(dmsMatch[6]);
+    const lngSec = parseFloat(dmsMatch[7]);
+    const lngDir = dmsMatch[8].toUpperCase();
+
+    let lat = latDeg + latMin / 60 + latSec / 3600;
+    if (latDir === 'S') lat = -lat;
+
+    let lng = lngDeg + lngMin / 60 + lngSec / 3600;
+    if (lngDir === 'W') lng = -lng;
+
+    if (isValidLatLng(lat, lng)) return { lat, lng };
+  }
+
+  // 7. Generic "messy" search for any two coordinates in the string
+  // Looks for "number.number" followed by separator and "number.number"
+  // This helps extract coordinates buried in text like: "My Position 29.977, -90.065 etc"
+  const genericFloatRegex = /(-?\d{1,3}\.\d+)[^0-9a-z.-]+(-?\d{1,3}\.\d+)/gi;
+  let match;
+  while ((match = genericFloatRegex.exec(input)) !== null) {
+    const lat = parseFloat(match[1]);
+    const lng = parseFloat(match[2]);
+    if (isValidLatLng(lat, lng)) {
+      return { lat, lng };
+    }
+  }
+
+  // 8. If it looks like a Plus Code (has a '+' with alphanumeric around it)
   // We return null here to let the main search handle it via geocoding
   // unless we had a library to resolve it locally.
   if (input.includes('+') && /[A-Z0-9]{4,}\+[A-Z0-9]{2,}/i.test(input)) {
@@ -98,4 +133,8 @@ export const parseLocationString = (input: string): ParsedLocation | null => {
   }
 
   return null;
+};
+
+const isValidLatLng = (lat: number, lng: number) => {
+  return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 };
