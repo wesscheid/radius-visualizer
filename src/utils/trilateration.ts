@@ -194,3 +194,29 @@ export function distance(p1: Point, p2: Point): number {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+/**
+ * Calculates a destination point given a start point, distance (meters), and bearing (degrees).
+ */
+export function computeDestinationPoint(start: Point, distance: number, bearing: number): Point {
+  const R = 6371000; // Earth's radius in meters
+  const δ = distance / R; // angular distance in radians
+  const θ = toRad(bearing);
+  const φ1 = toRad(start.lat);
+  const λ1 = toRad(start.lng);
+
+  const φ2 = Math.asin(
+    Math.sin(φ1) * Math.cos(δ) +
+    Math.cos(φ1) * Math.sin(δ) * Math.cos(θ)
+  );
+
+  const λ2 = λ1 + Math.atan2(
+    Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+    Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
+  );
+
+  return {
+    lat: toDeg(φ2),
+    lng: toDeg(λ2)
+  };
+}

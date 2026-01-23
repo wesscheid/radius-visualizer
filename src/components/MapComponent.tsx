@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { useStore } from '../store/useStore';
 import { auth } from '../firebase';
 import { formatRadius } from '../utils/format';
+import { computeDestinationPoint } from '../utils/trilateration';
 
 // Fix for default Leaflet marker icons in React
 // @ts-ignore
@@ -175,6 +176,8 @@ const MapComponent: React.FC = () => {
           const group = groups.find(g => g.id === radius.groupId);
           const isVisible = radius.visible && (group ? group.visible : true);
           const color = group ? group.color : radius.color;
+          
+          const handlePos = computeDestinationPoint({ lat: radius.lat, lng: radius.lng }, radius.radius, 90);
 
           return isVisible && (
             <React.Fragment key={radius.id}>
@@ -207,6 +210,32 @@ const MapComponent: React.FC = () => {
                   },
                 }}
               />
+              {selectedRadiusId === radius.id && (
+                <>
+                  <Polyline 
+                    positions={[
+                      [radius.lat, radius.lng],
+                      [handlePos.lat, handlePos.lng]
+                    ]}
+                    pathOptions={{ color: 'black', weight: 1, dashArray: '4, 4', opacity: 0.5 }}
+                    interactive={false}
+                  />
+                  <Marker
+                    position={[handlePos.lat, handlePos.lng]}
+                    draggable={true}
+                    icon={L.divIcon({ className: 'radius-handle', iconSize: [12, 12] })}
+                    eventHandlers={{
+                      drag: (e) => {
+                        const marker = e.target;
+                        const newPos = marker.getLatLng();
+                        const center = L.latLng(radius.lat, radius.lng);
+                        const newRadius = center.distanceTo(newPos);
+                        updateRadius(radius.id, { radius: newRadius });
+                      },
+                    }}
+                  />
+                </>
+              )}
             </React.Fragment>
           );
         })}
