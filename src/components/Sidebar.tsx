@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore, Radius, IntersectionPoint, Group } from '../store/useStore';
-import { Trash2, Eye, EyeOff, Plus, FolderOpen, Crosshair, Target, AlertCircle, ChevronDown, ChevronRight, Download, Save, LogOut, LogIn, Search, Locate, FileText } from 'lucide-react';
+import { Trash2, Eye, EyeOff, Plus, FolderOpen, Crosshair, Target, AlertCircle, ChevronDown, ChevronRight, Download, Save, LogOut, LogIn, Search, Locate, FileText, Layers } from 'lucide-react';
 import { clsx } from 'clsx';
 import { formatRadius, metersToImperial, imperialToMeters, downloadFile, convertToCSV, convertToGeoJSON } from '../utils/format';
 import { auth, googleProvider } from '../firebase';
@@ -108,6 +108,8 @@ const Sidebar: React.FC = () => {
     toggleSidebar,
     showIntersections,
     toggleIntersectionDisplay,
+    hideInputRadii,
+    toggleHideInputRadii,
     intersections,
     clearAllRadii,
     setMapCenter,
@@ -290,6 +292,16 @@ const Sidebar: React.FC = () => {
                 title="Toggle Intersection Calculation"
               >
                 <Crosshair size={20} />
+              </button>
+              <button
+                onClick={toggleHideInputRadii}
+                className={clsx(
+                  "p-3 md:p-2 rounded-full transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center border border-dark-border",
+                  !hideInputRadii ? "bg-blue-900/30 text-blue-400 border-blue-500/50" : "bg-dark-surface text-dark-text-secondary hover:bg-gray-700"
+                )}
+                title="Toggle Input Circles Visibility"
+              >
+                <Layers size={20} />
               </button>
             </div>
           </div>
@@ -684,6 +696,78 @@ const EditPanel = ({
           className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary text-sm resize-none placeholder-gray-600"
         />
       </div>
+
+      <div className="border-t border-dark-border pt-3 pb-1">
+        <label className="block text-xs font-bold text-dark-text-secondary uppercase mb-2">Appearance</label>
+        
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          {/* Color Picker */}
+          <div>
+            <label className="block text-xs font-medium text-dark-text-secondary mb-1">Color</label>
+            <div className="flex items-center gap-2">
+              <input 
+                type="color" 
+                value={selectedRadius.color}
+                onChange={(e) => updateRadius(selectedRadius.id, { color: e.target.value })}
+                disabled={!!selectedRadius.groupId}
+                className={clsx("w-full h-8 rounded cursor-pointer bg-dark-surface border border-dark-border p-0.5", !!selectedRadius.groupId && "opacity-50 cursor-not-allowed")}
+                title={selectedRadius.groupId ? "Inherited from Group" : "Change Color"}
+              />
+            </div>
+          </div>
+
+           {/* Border Style */}
+           <div>
+              <label className="block text-xs font-medium text-dark-text-secondary mb-1">Border Style</label>
+              <select
+                value={selectedRadius.borderStyle}
+                onChange={(e) => updateRadius(selectedRadius.id, { borderStyle: e.target.value })}
+                disabled={!(selectedRadius.outline ?? true)}
+                className="w-full h-8 bg-dark-surface border border-dark-border rounded px-2 text-xs text-dark-text-primary focus:outline-none focus:border-primary disabled:opacity-50"
+              >
+                <option value="solid">Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+              </select>
+           </div>
+        </div>
+
+        <div className="flex items-center gap-4 mb-2">
+             <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={selectedRadius.fill}
+                  onChange={(e) => updateRadius(selectedRadius.id, { fill: e.target.checked })}
+                  className="rounded border-gray-600 bg-dark-bg text-primary focus:ring-primary"
+                />
+                <span className="text-xs font-medium text-dark-text-secondary">Fill</span>
+             </label>
+
+             <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={selectedRadius.outline ?? true}
+                  onChange={(e) => updateRadius(selectedRadius.id, { outline: e.target.checked })}
+                  className="rounded border-gray-600 bg-dark-bg text-primary focus:ring-primary"
+                />
+                <span className="text-xs font-medium text-dark-text-secondary">Outline</span>
+             </label>
+        </div>
+
+        {selectedRadius.fill && (
+           <div className="flex items-center gap-2">
+              <span className="text-[10px] text-dark-text-secondary w-12">Opacity</span>
+              <input 
+                type="range" min="0" max="1" step="0.1" 
+                value={selectedRadius.opacity}
+                onChange={(e) => updateRadius(selectedRadius.id, { opacity: parseFloat(e.target.value) })}
+                className="flex-1 h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-[10px] text-dark-text-secondary w-8 text-right">{(selectedRadius.opacity * 100).toFixed(0)}%</span>
+           </div>
+        )}
+      </div>
+
       <div className="flex gap-3">
         <div className="flex-1">
           <label className="block text-xs font-medium text-dark-text-secondary mb-1">Latitude</label>

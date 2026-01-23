@@ -23,6 +23,7 @@ export interface Radius {
   visible: boolean;
   borderStyle: 'solid' | 'dashed' | 'dotted';
   fill: boolean;
+  outline: boolean;
   userId?: string;
   groupId?: string | null;
   reliability?: number; // 0-100, for weighted trilateration
@@ -58,6 +59,7 @@ interface AppState {
   // Trilateration State
   intersections: IntersectionPoint[];
   showIntersections: boolean;
+  hideInputRadii: boolean;
   showUngroupedAnalysis: boolean;
 
   // Actions
@@ -86,6 +88,7 @@ interface AppState {
   // Trilateration Actions
   setIntersections: (points: IntersectionPoint[]) => void;
   toggleIntersectionDisplay: () => void;
+  toggleHideInputRadii: () => void;
   toggleGroupAnalysis: (groupId: string) => void;
   toggleUngroupedAnalysis: () => void;
   setGeolocationDenied: (denied: boolean) => void;
@@ -110,6 +113,7 @@ export const useStore = create<AppState>((set, get) => ({
   
   intersections: [],
   showIntersections: true,
+  hideInputRadii: false,
   showUngroupedAnalysis: false,
 
   setRadii: (radii) => set({ radii }),
@@ -131,6 +135,7 @@ export const useStore = create<AppState>((set, get) => ({
       visible: true,
       borderStyle: 'solid',
       fill: true,
+      outline: true,
       userId,
       groupId: null,
       reliability: 100,
@@ -272,6 +277,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   setIntersections: (intersections) => set({ intersections }),
   toggleIntersectionDisplay: () => set((state) => ({ showIntersections: !state.showIntersections })),
+  toggleHideInputRadii: () => set((state) => ({ hideInputRadii: !state.hideInputRadii })),
 
   toggleGroupAnalysis: (groupId: string) => set((state) => ({
     groups: state.groups.map(g => g.id === groupId ? { ...g, showAnalysis: !g.showAnalysis } : g)

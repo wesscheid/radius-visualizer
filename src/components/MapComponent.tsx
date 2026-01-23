@@ -61,7 +61,8 @@ const MapComponent: React.FC = () => {
     isMeasuring,
     measurementPoints,
     intersections,
-    showIntersections
+    showIntersections,
+    hideInputRadii
   } = useStore();
 
   return (
@@ -170,7 +171,7 @@ const MapComponent: React.FC = () => {
           }
         })}
 
-        {radii.map((radius) => {
+        {!hideInputRadii && radii.map((radius) => {
           const group = groups.find(g => g.id === radius.groupId);
           const isVisible = radius.visible && (group ? group.visible : true);
           const color = group ? group.color : radius.color;
@@ -196,7 +197,7 @@ const MapComponent: React.FC = () => {
                   color: color,
                   fillColor: color,
                   fillOpacity: radius.fill ? radius.opacity : 0,
-                  weight: selectedRadiusId === radius.id ? 3 : 1,
+                  weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 3 : 1) : 0,
                   dashArray: radius.borderStyle === 'dashed' ? '5, 5' : radius.borderStyle === 'dotted' ? '1, 5' : undefined,
                 }}
                 eventHandlers={{
