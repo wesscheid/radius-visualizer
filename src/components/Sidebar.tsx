@@ -408,7 +408,19 @@ const Sidebar: React.FC = () => {
                   <div className="flex items-center gap-2 overflow-hidden">
                     <FolderOpen className="w-4 h-4 text-dark-text-secondary flex-shrink-0" />
                     <span className="font-semibold text-dark-text-primary text-sm truncate">{group.name}</span>
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: group.color }} />
+                    <label 
+                      className="w-4 h-4 rounded-full flex-shrink-0 cursor-pointer border border-white/10 hover:border-white/50 transition-colors relative overflow-hidden" 
+                      style={{ backgroundColor: group.color }}
+                      title="Change Group Color"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="color"
+                        value={group.color}
+                        onChange={(e) => updateGroup(group.id, { color: e.target.value })}
+                        className="opacity-0 w-full h-full absolute top-0 left-0 cursor-pointer"
+                      />
+                    </label>
                   </div>
                   <div className="flex items-center gap-1">
                     {bestFit && (
@@ -556,9 +568,9 @@ const Sidebar: React.FC = () => {
 };
 
 interface EditPanelProps {
-  selectedRadius: any;
-  updateRadius: any;
-  groups: any[];
+  selectedRadius: Radius;
+  updateRadius: (id: string, updates: Partial<Radius>) => Promise<void>;
+  groups: Group[];
   miles: number;
   feet: number;
   setMapCenter: (lat: number, lng: number) => void;
@@ -721,7 +733,7 @@ const EditPanel = ({
               <label className="block text-xs font-medium text-dark-text-secondary mb-1">Border Style</label>
               <select
                 value={selectedRadius.borderStyle}
-                onChange={(e) => updateRadius(selectedRadius.id, { borderStyle: e.target.value })}
+                onChange={(e) => updateRadius(selectedRadius.id, { borderStyle: e.target.value as Radius['borderStyle'] })}
                 disabled={!(selectedRadius.outline ?? true)}
                 className="w-full h-8 bg-dark-surface border border-dark-border rounded px-2 text-xs text-dark-text-primary focus:outline-none focus:border-primary disabled:opacity-50"
               >
