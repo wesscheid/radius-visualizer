@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Circle, Polyline, Tooltip, useMap, use
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useStore } from '../store/useStore';
-import { auth } from '../firebase';
 import { formatRadius } from '../utils/format';
 import { computeDestinationPoint } from '../utils/trilateration';
 
@@ -28,15 +27,13 @@ const MapUpdater = () => {
 };
 
 const MapEvents = () => {
-  const { addRadius, setMapCenter, setMapZoom, isMeasuring, addMeasurementPoint } = useStore();
+  const { setMapCenter, setMapZoom, isMeasuring, addMeasurementPoint } = useStore();
   const map = useMap();
   
   useMapEvents({
     click(e) {
       if (isMeasuring) {
         addMeasurementPoint(e.latlng.lat, e.latlng.lng);
-      } else {
-        addRadius(e.latlng.lat, e.latlng.lng, auth.currentUser?.uid);
       }
     },
     moveend() {

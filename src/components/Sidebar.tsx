@@ -8,6 +8,7 @@ import { distance } from '../utils/trilateration';
 import { parseLocationString } from '../utils/locationParser';
 import { linkWithPopup, signInWithPopup } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import AddRadiusModal from './AddRadiusModal';
 
 const AnalysisPanel = ({ bestFit, groupRadii, onExportCSV, onExportGeoJSON }: {
   bestFit: IntersectionPoint;
@@ -106,6 +107,8 @@ const Sidebar: React.FC = () => {
     removeRadius,
     sidebarOpen,
     toggleSidebar,
+    sidebarHeight,
+    setSidebarHeight,
     showIntersections,
     toggleIntersectionDisplay,
     hideInputRadii,
@@ -132,6 +135,9 @@ const Sidebar: React.FC = () => {
 
   const [newGroupName, setNewGroupName] = useState('');
   const [isLocating, setIsLocating] = useState(false);
+  
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [tempLocation, setTempLocation] = useState<{lat: number, lng: number} | null>(null);
 
   const selectedRadius = radii.find(r => r.id === selectedRadiusId);
   const { miles, feet } = selectedRadius ? metersToImperial(selectedRadius.radius) : { miles: 0, feet: 0 };
@@ -162,12 +168,11 @@ const Sidebar: React.FC = () => {
 
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const { latitude, longitude } = position.coords;
-        await addRadius(latitude, longitude, auth.currentUser?.uid);
-        setMapCenter(latitude, longitude);
-        setMapZoom(13);
+        setTempLocation({ lat: latitude, lng: longitude });
         setIsLocating(false);
+        setIsAddModalOpen(true);
       },
       (error) => {
         console.error("Error getting location:", error);
@@ -176,6 +181,16 @@ const Sidebar: React.FC = () => {
       },
       { enableHighAccuracy: true }
     );
+  };
+
+  const handleConfirmAdd = async (radius: number, groupId: string | null) => {
+    if (tempLocation) {
+      await addRadius(tempLocation.lat, tempLocation.lng, auth.currentUser?.uid, { radius, groupId });
+      setMapCenter(tempLocation.lat, tempLocation.lng);
+      setMapZoom(13);
+      setIsAddModalOpen(false);
+      setTempLocation(null);
+    }
   };
   
   const handleClearAll = async () => {
@@ -222,19 +237,32 @@ const Sidebar: React.FC = () => {
     }
   };
 
-  const handleCreateGroup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newGroupName.trim()) return;
+  const handleCreateGroupAndReturnId = async (name: string): Promise<string> => {
     const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
     try {
-      await addGroup(newGroupName, randomColor, auth.currentUser?.uid);
-      setNewGroupName('');
+      const newGroupId = await addGroup(name, randomColor, auth.currentUser?.uid);
+      return newGroupId;
     } catch (error) {
       console.error("Error creating group:", error);
       window.alert("Failed to create group. Please check your connection.");
+      throw error; // Re-throw to indicate failure
     }
   };
 
+  const handleFormSubmitForNewGroup = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) {
+      window.alert("Please enter a name for the new group.");
+      return;
+    }
+    try {
+      await handleCreateGroupAndReturnId(newGroupName);
+      setNewGroupName(''); // Clear the input after successful submission
+    } catch (error) {
+      // Error handling is already in handleCreateGroupAndReturnId
+    }
+  };
+  
   const getGroupedRadii = (groupId: string | null) => {
     if (groupId === null) {
       return radii.filter(r => !r.groupId || !groups.find(g => g.id === r.groupId));
@@ -252,22 +280,70 @@ const Sidebar: React.FC = () => {
     );
   };
 
+  const dragHandleRef = React.useRef<HTMLDivElement>(null);
+  const isDragging = React.useRef(false);
+
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    isDragging.current = true;
+    // For touch events, we need to prevent the default touch action
+    if ('touches' in e) {
+      e.preventDefault();
+    }
+    document.body.style.cursor = 'ns-resize';
+    window.addEventListener('mousemove', handleDragMove);
+    window.addEventListener('touchmove', handleDragMove);
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchend', handleDragEnd);
+  };
+
+  const handleDragMove = (e: MouseEvent | TouchEvent) => {
+    if (!isDragging.current) return;
+    
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const newHeight = ((window.innerHeight - clientY) / window.innerHeight) * 100;
+    
+    setSidebarHeight(newHeight);
+  };
+
+  const handleDragEnd = () => {
+    isDragging.current = false;
+    document.body.style.cursor = 'default';
+    window.removeEventListener('mousemove', handleDragMove);
+    window.removeEventListener('touchmove', handleDragMove);
+    window.removeEventListener('mouseup', handleDragEnd);
+    window.removeEventListener('touchend', handleDragEnd);
+  };
+
   if (!sidebarOpen && !selectedRadius) return null;
 
   return (
     <>
       <div className={clsx(
         "fixed md:absolute bottom-0 md:top-0 left-0 md:left-auto right-0",
-        "h-[50vh] md:h-full w-full md:w-80 bg-dark-bg shadow-xl z-10",
-        "flex flex-col transition-transform duration-300 rounded-t-2xl md:rounded-none border-r border-dark-border",
+        "h-[var(--sidebar-height)] md:h-full w-full md:w-80 bg-dark-bg shadow-xl z-10",
+        "flex flex-col rounded-t-2xl md:rounded-none border-r border-dark-border",
+        "transition-[height] duration-75 ease-out", // Smooth animation for height changes
         sidebarOpen ? "translate-y-0 md:translate-x-0" : "translate-y-full md:translate-y-0 md:translate-x-full"
-      )}>
+      )}
+      style={{ '--sidebar-height': `${sidebarHeight}vh` } as React.CSSProperties}
+      >
         <div 
-          className="md:hidden w-full flex items-center justify-center pt-3 pb-1 cursor-pointer active:opacity-70"
-          onClick={toggleSidebar}
+          ref={dragHandleRef}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+          className="md:hidden w-full flex items-center justify-center pt-3 pb-2 cursor-ns-resize active:opacity-70"
+          onClick={(e) => {
+            // Prevent toggling sidebar if it was a drag
+            if (isDragging.current) {
+              e.stopPropagation();
+              return;
+            }
+            toggleSidebar();
+          }}
         >
           <div className="w-12 h-1.5 bg-gray-600 rounded-full" />
         </div>
+        <div className="md:hidden border-b border-dark-border -mt-1"></div>
 
         <div className="p-4 border-b border-dark-border bg-dark-bg">
           <div className="flex items-center justify-between mb-4">
@@ -314,7 +390,7 @@ const Sidebar: React.FC = () => {
               <Locate size={20} className={isLocating ? "animate-pulse" : ""} />
               {isLocating ? "Getting Location..." : "Add at My Location"}
             </button>
-            <form onSubmit={handleCreateGroup} className="flex gap-2">
+            <form onSubmit={handleFormSubmitForNewGroup} className="flex gap-2">
               <input
                 type="text"
                 value={newGroupName}
@@ -563,6 +639,14 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
       )}
+
+      <AddRadiusModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onConfirm={handleConfirmAdd}
+        groups={groups}
+        onCreateGroup={handleCreateGroupAndReturnId}
+      />
     </>
   );
 };

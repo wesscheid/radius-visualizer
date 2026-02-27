@@ -25,3 +25,5 @@ yarn-error.log*
 .env
 google-cloud-sdk/
 .vercel
+
+.vercel

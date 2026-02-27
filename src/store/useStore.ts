@@ -48,6 +48,7 @@ interface AppState {
   mapCenter: { lat: number; lng: number };
   mapZoom: number;
   sidebarOpen: boolean;
+  sidebarHeight: number; // For mobile view, as a percentage of viewport height
   loading: boolean;
   geolocationDenied: boolean;
   showGeolocationWarning: boolean;
@@ -65,11 +66,11 @@ interface AppState {
   // Actions
   setRadii: (radii: Radius[]) => void;
   setGroups: (groups: Group[]) => void;
-  addRadius: (lat: number, lng: number, userId?: string) => Promise<void>;
+  addRadius: (lat: number, lng: number, userId?: string, options?: { radius?: number, groupId?: string | null }) => Promise<void>;
   updateRadius: (id: string, updates: Partial<Radius>) => Promise<void>;
   removeRadius: (id: string) => Promise<void>;
   
-  addGroup: (name: string, color: string, userId?: string) => Promise<void>;
+  addGroup: (name: string, color: string, userId?: string) => Promise<string>;
   updateGroup: (id: string, updates: Partial<Group>) => Promise<void>;
   removeGroup: (id: string) => Promise<void>;
   clearAllRadii: () => Promise<void>;
@@ -78,6 +79,7 @@ interface AppState {
   setMapCenter: (lat: number, lng: number) => void;
   setMapZoom: (zoom: number) => void;
   toggleSidebar: () => void;
+  setSidebarHeight: (height: number) => void;
   setLoading: (loading: boolean) => void;
 
   // Measurement Actions
@@ -104,6 +106,7 @@ export const useStore = create<AppState>((set, get) => ({
   mapCenter: { lat: 29.9511, lng: -90.0715 },
   mapZoom: 10,
   sidebarOpen: true,
+  sidebarHeight: 50, // Initial height for mobile
   loading: false,
   geolocationDenied: false,
   showGeolocationWarning: false,
@@ -120,7 +123,7 @@ export const useStore = create<AppState>((set, get) => ({
   setGroups: (groups) => set({ groups }),
   setLoading: (loading) => set({ loading }),
 
-  addRadius: async (lat, lng, userId) => {
+  addRadius: async (lat, lng, userId, options) => {
     const { radii } = get();
     const newColor = DEFAULT_COLORS[radii.length % DEFAULT_COLORS.length];
     const id = uuidv4();
@@ -129,7 +132,7 @@ export const useStore = create<AppState>((set, get) => ({
       name: `Location ${radii.length + 1}`,
       lat,
       lng,
-      radius: 8046.72,
+      radius: options?.radius ?? 8046.72,
       color: newColor,
       opacity: 0.3,
       visible: true,
@@ -137,7 +140,7 @@ export const useStore = create<AppState>((set, get) => ({
       fill: true,
       outline: true,
       userId,
-      groupId: null,
+      groupId: options?.groupId ?? null,
       reliability: 100,
       notes: ''
     };
@@ -188,6 +191,7 @@ export const useStore = create<AppState>((set, get) => ({
     } else {
       set((state) => ({ groups: [...state.groups, newGroup] }));
     }
+    return id; // Return the ID of the newly created group
   },
 
   updateGroup: async (id, updates) => {
@@ -258,6 +262,7 @@ export const useStore = create<AppState>((set, get) => ({
   setMapCenter: (lat, lng) => set({ mapCenter: { lat, lng } }),
   setMapZoom: (zoom) => set({ mapZoom: zoom }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+  setSidebarHeight: (height) => set({ sidebarHeight: Math.max(20, Math.min(90, height)) }), // Clamp between 20% and 90%
   
   toggleMeasurementMode: () => set((state) => ({ 
     isMeasuring: !state.isMeasuring,
