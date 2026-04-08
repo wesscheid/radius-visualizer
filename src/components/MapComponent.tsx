@@ -53,6 +53,7 @@ const MapComponent: React.FC = () => {
     radii, 
     groups,
     selectedRadiusId, 
+    locatingMode,
     selectRadius,
     updateRadius,
     mapCenter,
@@ -173,8 +174,11 @@ const MapComponent: React.FC = () => {
           const group = groups.find(g => g.id === radius.groupId);
           const isVisible = radius.visible && (group ? group.visible : true);
           const color = group ? group.color : radius.color;
+          const isHybrid = locatingMode === 'hybrid';
           
           const handlePos = computeDestinationPoint({ lat: radius.lat, lng: radius.lng }, radius.radius, 90);
+          const minHandlePos = isHybrid && radius.radiusMin ? computeDestinationPoint({ lat: radius.lat, lng: radius.lng }, radius.radiusMin, 45) : null;
+          const maxHandlePos = isHybrid && radius.radiusMax ? computeDestinationPoint({ lat: radius.lat, lng: radius.lng }, radius.radiusMax, 135) : null;
 
           return isVisible && (
             <React.Fragment key={radius.id}>
@@ -190,47 +194,126 @@ const MapComponent: React.FC = () => {
                   },
                 }}
               />
-              <Circle
-                center={[radius.lat, radius.lng]}
-                radius={radius.radius}
-                pathOptions={{
-                  color: color,
-                  fillColor: color,
-                  fillOpacity: radius.fill ? radius.opacity : 0,
-                  weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 3 : 1) : 0,
-                  dashArray: radius.borderStyle === 'dashed' ? '5, 5' : radius.borderStyle === 'dotted' ? '1, 5' : undefined,
-                }}
-                eventHandlers={{
-                  click: (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    if (!isMeasuring) selectRadius(radius.id);
-                  },
-                }}
-              />
-              {selectedRadiusId === radius.id && (
+              
+              {isHybrid ? (
                 <>
-                  <Polyline 
-                    positions={[
-                      [radius.lat, radius.lng],
-                      [handlePos.lat, handlePos.lng]
-                    ]}
-                    pathOptions={{ color: 'black', weight: 1, dashArray: '4, 4', opacity: 0.5 }}
+                  {/* Min Radius */}
+                  <Circle
+                    center={[radius.lat, radius.lng]}
+                    radius={radius.radiusMin ?? radius.radius}
+                    pathOptions={{
+                      color: color,
+                      fillColor: 'transparent',
+                      fillOpacity: 0,
+                      weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 2 : 1) : 0,
+                      dashArray: '5, 10',
+                    }}
                     interactive={false}
                   />
-                  <Marker
-                    position={[handlePos.lat, handlePos.lng]}
-                    draggable={true}
-                    icon={L.divIcon({ className: 'radius-handle', iconSize: [12, 12] })}
+                  {/* Max Radius - This one provides the fill for the annulus area */}
+                  <Circle
+                    center={[radius.lat, radius.lng]}
+                    radius={radius.radiusMax ?? radius.radius}
+                    pathOptions={{
+                      color: color,
+                      fillColor: color,
+                      fillOpacity: radius.fill ? radius.opacity : 0,
+                      weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 2 : 1) : 0,
+                    }}
                     eventHandlers={{
-                      drag: (e) => {
-                        const marker = e.target;
-                        const newPos = marker.getLatLng();
-                        const center = L.latLng(radius.lat, radius.lng);
-                        const newRadius = center.distanceTo(newPos);
-                        updateRadius(radius.id, { radius: newRadius });
+                      click: (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        if (!isMeasuring) selectRadius(radius.id);
                       },
                     }}
                   />
+                </>
+              ) : (
+                <Circle
+                  center={[radius.lat, radius.lng]}
+                  radius={radius.radius}
+                  pathOptions={{
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: radius.fill ? radius.opacity : 0,
+                    weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 3 : 1) : 0,
+                    dashArray: radius.borderStyle === 'dashed' ? '5, 5' : radius.borderStyle === 'dotted' ? '1, 5' : undefined,
+                  }}
+                  eventHandlers={{
+                    click: (e) => {
+                      L.DomEvent.stopPropagation(e);
+                      if (!isMeasuring) selectRadius(radius.id);
+                    },
+                  }}
+                />
+              )}
+
+              {selectedRadiusId === radius.id && (
+                <>
+                  {!isHybrid && (
+                    <>
+                      <Polyline 
+                        positions={[
+                          [radius.lat, radius.lng],
+                          [handlePos.lat, handlePos.lng]
+                        ]}
+                        pathOptions={{ color: 'black', weight: 1, dashArray: '4, 4', opacity: 0.5 }}
+                        interactive={false}
+                      />
+                      <Marker
+                        position={[handlePos.lat, handlePos.lng]}
+                        draggable={true}
+                        icon={L.divIcon({ className: 'radius-handle', iconSize: [12, 12] })}
+                        eventHandlers={{
+                          drag: (e) => {
+                            const marker = e.target;
+                            const newPos = marker.getLatLng();
+                            const center = L.latLng(radius.lat, radius.lng);
+                            const newRadius = center.distanceTo(newPos);
+                            updateRadius(radius.id, { radius: newRadius });
+                          },
+                        }}
+                      />
+                    </>
+                  )}
+                  
+                  {isHybrid && minHandlePos && (
+                    <Marker
+                      position={[minHandlePos.lat, minHandlePos.lng]}
+                      draggable={true}
+                      icon={L.divIcon({ className: 'radius-handle min-handle', iconSize: [12, 12] })}
+                      eventHandlers={{
+                        drag: (e) => {
+                          const marker = e.target;
+                          const newPos = marker.getLatLng();
+                          const center = L.latLng(radius.lat, radius.lng);
+                          const newRadius = center.distanceTo(newPos);
+                          updateRadius(radius.id, { radiusMin: newRadius });
+                        },
+                      }}
+                    >
+                      <Tooltip direction="top">Min Radius</Tooltip>
+                    </Marker>
+                  )}
+
+                  {isHybrid && maxHandlePos && (
+                    <Marker
+                      position={[maxHandlePos.lat, maxHandlePos.lng]}
+                      draggable={true}
+                      icon={L.divIcon({ className: 'radius-handle max-handle', iconSize: [12, 12] })}
+                      eventHandlers={{
+                        drag: (e) => {
+                          const marker = e.target;
+                          const newPos = marker.getLatLng();
+                          const center = L.latLng(radius.lat, radius.lng);
+                          const newRadius = center.distanceTo(newPos);
+                          updateRadius(radius.id, { radiusMax: newRadius });
+                        },
+                      }}
+                    >
+                      <Tooltip direction="top">Max Radius</Tooltip>
+                    </Marker>
+                  )}
                 </>
               )}
             </React.Fragment>

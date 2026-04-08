@@ -27,6 +27,15 @@ code {
   cursor: ew-resize;
   box-shadow: 0 0 4px rgba(0,0,0,0.4);
   transition: transform 0.1s ease;
+  z-index: 1000;
+}
+
+.radius-handle.min-handle {
+  border-color: #f59e0b; /* Orange for min */
+}
+
+.radius-handle.max-handle {
+  border-color: #10b981; /* Green for max */
 }
 
 .radius-handle:hover {

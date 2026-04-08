@@ -18,6 +18,8 @@ export interface Radius {
   lat: number;
   lng: number;
   radius: number;
+  radiusMin?: number; // For hybrid mode
+  radiusMax?: number; // For hybrid mode
   color: string;
   opacity: number;
   visible: boolean;
@@ -45,6 +47,7 @@ interface AppState {
   radii: Radius[];
   groups: Group[];
   selectedRadiusId: string | null;
+  locatingMode: 'standard' | 'hybrid';
   mapCenter: { lat: number; lng: number };
   mapZoom: number;
   sidebarOpen: boolean;
@@ -66,7 +69,7 @@ interface AppState {
   // Actions
   setRadii: (radii: Radius[]) => void;
   setGroups: (groups: Group[]) => void;
-  addRadius: (lat: number, lng: number, userId?: string, options?: { radius?: number, groupId?: string | null }) => Promise<void>;
+  addRadius: (lat: number, lng: number, userId?: string, options?: { radius?: number, radiusMin?: number, radiusMax?: number, groupId?: string | null }) => Promise<void>;
   updateRadius: (id: string, updates: Partial<Radius>) => Promise<void>;
   removeRadius: (id: string) => Promise<void>;
   
@@ -75,6 +78,7 @@ interface AppState {
   removeGroup: (id: string) => Promise<void>;
   clearAllRadii: () => Promise<void>;
   
+  setLocatingMode: (mode: 'standard' | 'hybrid') => void;
   selectRadius: (id: string | null) => void;
   setMapCenter: (lat: number, lng: number) => void;
   setMapZoom: (zoom: number) => void;
@@ -103,6 +107,7 @@ export const useStore = create<AppState>((set, get) => ({
   radii: [],
   groups: [],
   selectedRadiusId: null,
+  locatingMode: 'standard',
   mapCenter: { lat: 29.9511, lng: -90.0715 },
   mapZoom: 10,
   sidebarOpen: true,
@@ -124,15 +129,20 @@ export const useStore = create<AppState>((set, get) => ({
   setLoading: (loading) => set({ loading }),
 
   addRadius: async (lat, lng, userId, options) => {
-    const { radii } = get();
+    const { radii, locatingMode } = get();
     const newColor = DEFAULT_COLORS[radii.length % DEFAULT_COLORS.length];
     const id = uuidv4();
+    
+    // Default values based on mode
+    const defaultRadius = options?.radius ?? 8046.72; // 5 miles
     const newRadius: Radius = {
       id,
       name: `Location ${radii.length + 1}`,
       lat,
       lng,
-      radius: options?.radius ?? 8046.72,
+      radius: defaultRadius,
+      radiusMin: options?.radiusMin ?? (locatingMode === 'hybrid' ? defaultRadius * 0.8 : undefined),
+      radiusMax: options?.radiusMax ?? (locatingMode === 'hybrid' ? defaultRadius * 1.2 : undefined),
       color: newColor,
       opacity: 0.3,
       visible: true,
@@ -258,6 +268,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ radii: [], groups: [], selectedRadiusId: null });
   },
 
+  setLocatingMode: (mode) => set({ locatingMode: mode }),
   selectRadius: (id) => set({ selectedRadiusId: id }),
   setMapCenter: (lat, lng) => set({ mapCenter: { lat, lng } }),
   setMapZoom: (zoom) => set({ mapZoom: zoom }),

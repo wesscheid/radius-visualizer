@@ -3,11 +3,13 @@ interface Point {
   lng: number;
 }
 
-interface Circle {
+export interface Circle {
   id: string;
   lat: number;
   lng: number;
   radius: number; // meters
+  radiusMin?: number;
+  radiusMax?: number;
   reliability?: number; // 0-100
 }
 
@@ -182,6 +184,143 @@ export function calculateTrilateration(circles: Circle[]): { point: Point; confi
     errorRadius: rmse // The "Uncertainty Region" radius
   };
 }
+
+/**
+ * Finds the "Best Fit" point for locations that may have a range (min/max radius).
+ * This is a refined version of multilateration that handles "Annuli" (donuts).
+ */
+export function calculateRangeTrilateration(circles: Circle[]): { point: Point; confidence: number; errorRadius: number } | null {
+  if (circles.length < 2) return null;
+
+  // 1. Identify unique locations and their distance ranges
+  const locationMap = new Map<string, { lat: number; lng: number; rMin: number; rMax: number; reliability: number }>();
+  
+  circles.forEach(c => {
+    const key = `${c.lat.toFixed(6)},${c.lng.toFixed(6)}`;
+    const existing = locationMap.get(key);
+    
+    // Use explicit ranges if available, otherwise fallback to the single radius
+    const currentMin = c.radiusMin ?? c.radius;
+    const currentMax = c.radiusMax ?? c.radius;
+
+    if (existing) {
+      existing.rMin = Math.min(existing.rMin, currentMin);
+      existing.rMax = Math.max(existing.rMax, currentMax);
+      existing.reliability = Math.max(existing.reliability, c.reliability ?? 100);
+    } else {
+      locationMap.set(key, {
+        lat: c.lat,
+        lng: c.lng,
+        rMin: currentMin,
+        rMax: currentMax,
+        reliability: c.reliability ?? 100
+      });
+    }
+  });
+
+  const locations = Array.from(locationMap.values());
+  if (locations.length < 1) return null;
+
+  // 2. Get all pairwise intersections of ALL circle perimeters (min and max)
+  const intersections: Array<Point & { weight: number }> = [];
+  
+  // To get more candidates, we should intersect all boundaries
+  const allCircles: Circle[] = [];
+  circles.forEach(c => {
+    if (c.radiusMin !== undefined && c.radiusMax !== undefined) {
+      allCircles.push({ ...c, radius: c.radiusMin });
+      allCircles.push({ ...c, radius: c.radiusMax });
+    } else {
+      allCircles.push(c);
+    }
+  });
+
+  for (let i = 0; i < allCircles.length; i++) {
+    for (let j = i + 1; j < allCircles.length; j++) {
+      const c1 = allCircles[i];
+      const c2 = allCircles[j];
+      
+      const dCenters = distance(c1, c2);
+      if (dCenters < 0.1) continue; 
+
+      const points = getCircleIntersections(c1, c2);
+      const w1 = (c1.reliability ?? 100) / 100;
+      const w2 = (c2.reliability ?? 100) / 100;
+      const combinedWeight = (w1 + w2) / 2;
+
+      points.forEach(p => {
+        intersections.push({ ...p, weight: combinedWeight });
+      });
+    }
+  }
+
+  if (intersections.length === 0) {
+    // Fallback: if no intersections (e.g. nested or far apart), use centroid of centers
+    let avgLat = 0, avgLng = 0;
+    locations.forEach(l => { avgLat += l.lat; avgLng += l.lng; });
+    return { 
+      point: { lat: avgLat / locations.length, lng: avgLng / locations.length }, 
+      confidence: 0.1, 
+      errorRadius: 1000 
+    };
+  }
+
+  // 3. Score points by "Annulus Consistency"
+  const scoredPoints = intersections.map(p => {
+    let weightedErrorSum = 0;
+    let totalWeight = 0;
+
+    locations.forEach(loc => {
+      const d = distance(p, loc);
+      const error = Math.max(0, loc.rMin - d, d - loc.rMax);
+      const weight = loc.reliability / 100;
+      
+      weightedErrorSum += weight * (error * error);
+      totalWeight += weight;
+    });
+
+    return { 
+      point: p, 
+      error: totalWeight > 0 ? weightedErrorSum / totalWeight : weightedErrorSum,
+      weight: p.weight 
+    };
+  });
+
+  scoredPoints.sort((a, b) => a.error - b.error);
+
+  const tolerance = 10; // 10 meters tolerance
+  const perfectPoints = scoredPoints.filter(p => p.error <= tolerance * tolerance);
+  const candidates = perfectPoints.length >= 2 ? perfectPoints : scoredPoints.slice(0, Math.max(3, Math.ceil(intersections.length * 0.3)));
+
+  let sumLat = 0, sumLng = 0, sumW = 0;
+  candidates.forEach(cand => {
+    const scoreWeight = 1 / (Math.sqrt(cand.error) + 1); 
+    const finalWeight = cand.weight * scoreWeight;
+
+    sumLat += cand.point.lat * finalWeight;
+    sumLng += cand.point.lng * finalWeight;
+    sumW += finalWeight;
+  });
+
+  const bestPoint = { lat: sumLat / sumW, lng: sumLng / sumW };
+
+  // 4. Calculate Metrics
+  let totalSqRangeError = 0;
+  locations.forEach(loc => {
+    const d = distance(bestPoint, loc);
+    const err = Math.max(0, loc.rMin - d, d - loc.rMax);
+    totalSqRangeError += err * err;
+  });
+  const rmse = Math.sqrt(totalSqRangeError / locations.length);
+  const confidence = 1 / (1 + (rmse / 100)); // 100m error = 0.5 confidence
+
+  return { 
+    point: bestPoint, 
+    confidence,
+    errorRadius: rmse 
+  };
+}
+
 
 export function distance(p1: Point, p2: Point): number {
   const R = 6371000;

@@ -122,6 +122,8 @@ const Sidebar: React.FC = () => {
     showUngroupedAnalysis,
     toggleGroupAnalysis,
     toggleUngroupedAnalysis,
+    locatingMode,
+    setLocatingMode,
   } = useStore();
 
   const [user] = useAuthState(auth);
@@ -381,6 +383,33 @@ const Sidebar: React.FC = () => {
               </button>
             </div>
           </div>
+          
+          {/* Mode Switcher */}
+          <div className="flex p-1 bg-dark-surface rounded-lg mb-4 border border-dark-border">
+            <button
+              onClick={() => setLocatingMode('standard')}
+              className={clsx(
+                "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
+                locatingMode === 'standard' 
+                  ? "bg-primary text-white shadow-sm" 
+                  : "text-dark-text-secondary hover:text-dark-text-primary"
+              )}
+            >
+              Standard
+            </button>
+            <button
+              onClick={() => setLocatingMode('hybrid')}
+              className={clsx(
+                "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
+                locatingMode === 'hybrid' 
+                  ? "bg-primary text-white shadow-sm" 
+                  : "text-dark-text-secondary hover:text-dark-text-primary"
+              )}
+            >
+              Hybrid (Range)
+            </button>
+          </div>
+
           <div className="space-y-3">
             <button 
               onClick={handleAddAtCurrentLocation}
@@ -670,7 +699,11 @@ const EditPanel = ({
   setMapCenter, 
   setMapZoom 
 }: EditPanelProps) => {
+  const locatingMode = useStore((state) => state.locatingMode);
   const [locationInput, setLocationInput] = useState(`${selectedRadius.lat.toFixed(6)}, ${selectedRadius.lng.toFixed(6)}`);
+
+  const { miles: minMiles, feet: minFeet } = metersToImperial(selectedRadius.radiusMin ?? selectedRadius.radius * 0.8);
+  const { miles: maxMiles, feet: maxFeet } = metersToImperial(selectedRadius.radiusMax ?? selectedRadius.radius * 1.2);
 
   React.useEffect(() => {
     setLocationInput(`${selectedRadius.lat.toFixed(6)}, ${selectedRadius.lng.toFixed(6)}`);
@@ -735,6 +768,30 @@ const EditPanel = ({
     const newFeet = parseInt(f) || 0;
     const newMeters = imperialToMeters(miles, newFeet);
     updateRadius(selectedRadius.id, { radius: newMeters });
+  };
+
+  const handleMinMilesChange = (m: string) => {
+    const val = parseInt(m) || 0;
+    const meters = imperialToMeters(val, minFeet);
+    updateRadius(selectedRadius.id, { radiusMin: meters });
+  };
+
+  const handleMinFeetChange = (f: string) => {
+    const val = parseInt(f) || 0;
+    const meters = imperialToMeters(minMiles, val);
+    updateRadius(selectedRadius.id, { radiusMin: meters });
+  };
+
+  const handleMaxMilesChange = (m: string) => {
+    const val = parseInt(m) || 0;
+    const meters = imperialToMeters(val, maxFeet);
+    updateRadius(selectedRadius.id, { radiusMax: meters });
+  };
+
+  const handleMaxFeetChange = (f: string) => {
+    const val = parseInt(f) || 0;
+    const meters = imperialToMeters(maxMiles, val);
+    updateRadius(selectedRadius.id, { radiusMax: meters });
   };
 
   return (
@@ -882,35 +939,82 @@ const EditPanel = ({
           />
         </div>
       </div>
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-dark-text-secondary mb-1">Miles</label>
-          <input 
-            type="number" value={miles}
-            onChange={(e) => handleMilesChange(e.target.value)}
-            className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
-          />
+      {locatingMode === 'standard' ? (
+        <>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-dark-text-secondary mb-1">Miles</label>
+              <input 
+                type="number" value={miles}
+                onChange={(e) => handleMilesChange(e.target.value)}
+                className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-dark-text-secondary mb-1">Feet</label>
+              <input 
+                type="number" value={feet}
+                onChange={(e) => handleFeetChange(e.target.value)}
+                className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-dark-text-secondary mb-1">Radius Adjuster</label>
+            <input 
+              type="range" min="100" max="80467" step="10" value={selectedRadius.radius}
+              onChange={(e) => updateRadius(selectedRadius.id, { radius: Number(e.target.value) })}
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            />
+            <div className="text-[10px] text-dark-text-secondary mt-1 text-right italic">
+              {formatRadius(selectedRadius.radius)}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-4 bg-dark-surface/50 p-3 rounded-lg border border-dark-border">
+          <div className="flex items-center gap-2 mb-1">
+             <Target size={14} className="text-primary" />
+             <span className="text-[10px] font-bold text-dark-text-secondary uppercase">Hybrid Range (Annulus)</span>
+          </div>
+          
+          <div>
+            <label className="block text-[10px] font-medium text-dark-text-secondary mb-1">MIN RADIUS (Farther than...)</label>
+            <div className="flex gap-2">
+              <input 
+                type="number" value={minMiles}
+                onChange={(e) => handleMinMilesChange(e.target.value)}
+                className="flex-1 px-2 py-1 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary"
+              />
+              <span className="text-[10px] flex items-center">mi</span>
+              <input 
+                type="number" value={minFeet}
+                onChange={(e) => handleMinFeetChange(e.target.value)}
+                className="flex-1 px-2 py-1 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary"
+              />
+              <span className="text-[10px] flex items-center">ft</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-medium text-dark-text-secondary mb-1">MAX RADIUS (No farther than...)</label>
+            <div className="flex gap-2">
+              <input 
+                type="number" value={maxMiles}
+                onChange={(e) => handleMaxMilesChange(e.target.value)}
+                className="flex-1 px-2 py-1 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary"
+              />
+              <span className="text-[10px] flex items-center">mi</span>
+              <input 
+                type="number" value={maxFeet}
+                onChange={(e) => handleMaxFeetChange(e.target.value)}
+                className="flex-1 px-2 py-1 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary"
+              />
+              <span className="text-[10px] flex items-center">ft</span>
+            </div>
+          </div>
         </div>
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-dark-text-secondary mb-1">Feet</label>
-          <input 
-            type="number" value={feet}
-            onChange={(e) => handleFeetChange(e.target.value)}
-            className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
-          />
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-dark-text-secondary mb-1">Radius Adjuster</label>
-        <input 
-          type="range" min="100" max="80467" step="10" value={selectedRadius.radius}
-          onChange={(e) => updateRadius(selectedRadius.id, { radius: Number(e.target.value) })}
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-        />
-        <div className="text-[10px] text-dark-text-secondary mt-1 text-right italic">
-          {formatRadius(selectedRadius.radius)}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
