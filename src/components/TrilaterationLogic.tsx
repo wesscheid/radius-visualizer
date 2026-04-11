@@ -107,8 +107,10 @@ const TrilaterationLogic: React.FC = () => {
             confidence: bestFit.confidence,
             errorRadius: bestFit.errorRadius,
             parents: groupRadii.map(r => r.id),
-            color: getAverageColor(allColors)
+            color: getAverageColor(allColors),
+            polygonPoints: bestFit.polygonPoints
           });
+
         }
       }
     });

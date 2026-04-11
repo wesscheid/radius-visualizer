@@ -1,19 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Group } from '../store/useStore';
 import { imperialToMeters } from '../utils/format';
-import { X } from 'lucide-react';
+import { X, Target } from 'lucide-react';
 
 interface AddRadiusModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (radius: number, groupId: string | null) => void;
+  onConfirm: (radius: number, groupId: string | null, radiusMin?: number, radiusMax?: number) => void;
   groups: Group[];
   onCreateGroup: (name: string) => Promise<string>;
+  locatingMode: 'standard' | 'hybrid';
 }
 
-const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConfirm, groups, onCreateGroup }) => {
+const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConfirm, groups, onCreateGroup, locatingMode }) => {
   const [miles, setMiles] = useState<number | string>(0);
   const [feet, setFeet] = useState<number | string>(2500);
+  
+  // Hybrid fields
+  const [minMiles, setMinMiles] = useState<number | string>(0);
+  const [minFeet, setMinFeet] = useState<number | string>(2000);
+  const [maxMiles, setMaxMiles] = useState<number | string>(0);
+  const [maxFeet, setMaxFeet] = useState<number | string>(3000);
+
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [newGroupName, setNewGroupName] = useState<string>('');
   const [isCreatingNewGroup, setIsCreatingNewGroup] = useState<boolean>(false);
@@ -23,6 +31,10 @@ const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConf
     if (isOpen) {
       setMiles(0);
       setFeet(2500);
+      setMinMiles(0);
+      setMinFeet(2000);
+      setMaxMiles(0);
+      setMaxFeet(3000);
       setSelectedGroupId('');
       setNewGroupName('');
       setIsCreatingNewGroup(false);
@@ -31,9 +43,18 @@ const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConf
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const m = miles === '' ? 0 : Number(miles);
-    const f = feet === '' ? 0 : Number(feet);
-    const meters = imperialToMeters(m, f);
+    
+    let radius: number;
+    let radiusMin: number | undefined;
+    let radiusMax: number | undefined;
+
+    if (locatingMode === 'hybrid') {
+      radiusMin = imperialToMeters(minMiles === '' ? 0 : Number(minMiles), minFeet === '' ? 0 : Number(minFeet));
+      radiusMax = imperialToMeters(maxMiles === '' ? 0 : Number(maxMiles), maxFeet === '' ? 0 : Number(maxFeet));
+      radius = (radiusMin + radiusMax) / 2;
+    } else {
+      radius = imperialToMeters(miles === '' ? 0 : Number(miles), feet === '' ? 0 : Number(feet));
+    }
 
     let finalGroupId: string | null = selectedGroupId || null;
 
@@ -48,44 +69,23 @@ const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConf
       return;
     }
     
-    if (meters === 0) {
+    if (radius === 0 && !radiusMax) {
       alert("Radius distance cannot be zero.");
       return;
     }
-    onConfirm(meters, finalGroupId);
+    onConfirm(radius, finalGroupId, radiusMin, radiusMax);
   };
 
   const isFormValid = () => {
-    const m = miles === '' ? 0 : Number(miles);
-    const f = feet === '' ? 0 : Number(feet);
-    const meters = imperialToMeters(m, f);
-    const isRadiusValid = meters > 0;
     const isGroupValid = (selectedGroupId !== '' && !isCreatingNewGroup) || (isCreatingNewGroup && newGroupName.trim() !== '');
-    return isRadiusValid && isGroupValid;
-  };
-
-
-  const handleMilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val === '') {
-      setMiles('');
+    
+    if (locatingMode === 'hybrid') {
+      const min = imperialToMeters(minMiles === '' ? 0 : Number(minMiles), minFeet === '' ? 0 : Number(minFeet));
+      const max = imperialToMeters(maxMiles === '' ? 0 : Number(maxMiles), maxFeet === '' ? 0 : Number(maxFeet));
+      return isGroupValid && max > 0 && max >= min;
     } else {
-      const num = parseInt(val);
-      if (!isNaN(num)) {
-        setMiles(num);
-      }
-    }
-  };
-
-  const handleFeetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val === '') {
-      setFeet('');
-    } else {
-      const num = parseInt(val);
-      if (!isNaN(num)) {
-        setFeet(num);
-      }
+      const meters = imperialToMeters(miles === '' ? 0 : Number(miles), feet === '' ? 0 : Number(feet));
+      return isGroupValid && meters > 0;
     }
   };
 
@@ -105,36 +105,93 @@ const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConf
         </div>
         
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-dark-text-secondary mb-1">Radius Distance</label>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    value={miles}
-                    onChange={handleMilesChange}
-                    className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
-                  />
-                  <span className="absolute right-3 top-2 text-xs text-dark-text-secondary font-medium pointer-events-none">mi</span>
+          {locatingMode === 'standard' ? (
+            <div>
+              <label className="block text-sm font-medium text-dark-text-secondary mb-1">Radius Distance</label>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      value={miles}
+                      onChange={(e) => setMiles(e.target.value)}
+                      className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-dark-text-secondary font-medium pointer-events-none">mi</span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1">
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    max="5279"
-                    value={feet}
-                    onChange={handleFeetChange}
-                    className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
-                  />
-                  <span className="absolute right-3 top-2 text-xs text-dark-text-secondary font-medium pointer-events-none">ft</span>
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="5279"
+                      value={feet}
+                      onChange={(e) => setFeet(e.target.value)}
+                      className="w-full px-3 py-2 bg-dark-surface border border-dark-border rounded focus:outline-none focus:border-primary text-dark-text-primary"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-dark-text-secondary font-medium pointer-events-none">ft</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-primary/10 p-3 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-2 mb-3">
+                   <Target size={16} className="text-primary" />
+                   <span className="text-xs font-bold text-dark-text-primary uppercase">Hybrid Range</span>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-dark-text-secondary mb-1 uppercase tracking-wider">Min Distance (Farther than...)</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input 
+                          type="number" value={minMiles}
+                          onChange={(e) => setMinMiles(e.target.value)}
+                          className="w-full pl-2 pr-6 py-1.5 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary focus:border-primary outline-none"
+                        />
+                        <span className="absolute right-2 top-1.5 text-[10px] text-dark-text-secondary">mi</span>
+                      </div>
+                      <div className="relative flex-1">
+                        <input 
+                          type="number" value={minFeet}
+                          onChange={(e) => setMinFeet(e.target.value)}
+                          className="w-full pl-2 pr-6 py-1.5 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary focus:border-primary outline-none"
+                        />
+                        <span className="absolute right-2 top-1.5 text-[10px] text-dark-text-secondary">ft</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-dark-text-secondary mb-1 uppercase tracking-wider">Max Distance (No farther than...)</label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input 
+                          type="number" value={maxMiles}
+                          onChange={(e) => setMaxMiles(e.target.value)}
+                          className="w-full pl-2 pr-6 py-1.5 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary focus:border-primary outline-none"
+                        />
+                        <span className="absolute right-2 top-1.5 text-[10px] text-dark-text-secondary">mi</span>
+                      </div>
+                      <div className="relative flex-1">
+                        <input 
+                          type="number" value={maxFeet}
+                          onChange={(e) => setMaxFeet(e.target.value)}
+                          className="w-full pl-2 pr-6 py-1.5 bg-dark-bg border border-dark-border rounded text-xs text-dark-text-primary focus:border-primary outline-none"
+                        />
+                        <span className="absolute right-2 top-1.5 text-[10px] text-dark-text-secondary">ft</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-dark-text-secondary mb-1">Assign to Group</label>

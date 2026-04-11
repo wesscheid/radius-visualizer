@@ -185,9 +185,9 @@ const Sidebar: React.FC = () => {
     );
   };
 
-  const handleConfirmAdd = async (radius: number, groupId: string | null) => {
+  const handleConfirmAdd = async (radius: number, groupId: string | null, radiusMin?: number, radiusMax?: number) => {
     if (tempLocation) {
-      await addRadius(tempLocation.lat, tempLocation.lng, auth.currentUser?.uid, { radius, groupId });
+      await addRadius(tempLocation.lat, tempLocation.lng, auth.currentUser?.uid, { radius, radiusMin, radiusMax, groupId });
       setMapCenter(tempLocation.lat, tempLocation.lng);
       setMapZoom(13);
       setIsAddModalOpen(false);
@@ -675,6 +675,7 @@ const Sidebar: React.FC = () => {
         onConfirm={handleConfirmAdd}
         groups={groups}
         onCreateGroup={handleCreateGroupAndReturnId}
+        locatingMode={locatingMode}
       />
     </>
   );

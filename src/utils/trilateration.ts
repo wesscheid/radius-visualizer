@@ -189,7 +189,7 @@ export function calculateTrilateration(circles: Circle[]): { point: Point; confi
  * Finds the "Best Fit" point for locations that may have a range (min/max radius).
  * This is a refined version of multilateration that handles "Annuli" (donuts).
  */
-export function calculateRangeTrilateration(circles: Circle[]): { point: Point; confidence: number; errorRadius: number } | null {
+export function calculateRangeTrilateration(circles: Circle[]): { point: Point; confidence: number; errorRadius: number; polygonPoints?: Point[] } | null {
   if (circles.length < 2) return null;
 
   // 1. Identify unique locations and their distance ranges
@@ -204,8 +204,14 @@ export function calculateRangeTrilateration(circles: Circle[]): { point: Point; 
     const currentMax = c.radiusMax ?? c.radius;
 
     if (existing) {
-      existing.rMin = Math.min(existing.rMin, currentMin);
-      existing.rMax = Math.max(existing.rMax, currentMax);
+      existing.rMin = Math.max(existing.rMin, currentMin);
+      existing.rMax = Math.min(existing.rMax, currentMax);
+      // Ensure range is valid
+      if (existing.rMin > existing.rMax) {
+        // Empty intersection, fallback to a sensible average or keep as is? 
+        // For now, let's keep the min to prevent errors.
+        existing.rMax = existing.rMin;
+      }
       existing.reliability = Math.max(existing.reliability, c.reliability ?? 100);
     } else {
       locationMap.set(key, {
@@ -227,9 +233,9 @@ export function calculateRangeTrilateration(circles: Circle[]): { point: Point; 
   // To get more candidates, we should intersect all boundaries
   const allCircles: Circle[] = [];
   circles.forEach(c => {
-    if (c.radiusMin !== undefined && c.radiusMax !== undefined) {
-      allCircles.push({ ...c, radius: c.radiusMin });
-      allCircles.push({ ...c, radius: c.radiusMax });
+    if (c.radiusMin !== undefined || c.radiusMax !== undefined) {
+      if (c.radiusMin && c.radiusMin > 0) allCircles.push({ ...c, radius: c.radiusMin });
+      if (c.radiusMax && c.radiusMax > 0) allCircles.push({ ...c, radius: c.radiusMax });
     } else {
       allCircles.push(c);
     }
@@ -290,6 +296,25 @@ export function calculateRangeTrilateration(circles: Circle[]): { point: Point; 
 
   const tolerance = 10; // 10 meters tolerance
   const perfectPoints = scoredPoints.filter(p => p.error <= tolerance * tolerance);
+  
+  // Create a polygon from all points that are "good enough" (almost perfect overlap)
+  let polygonPoints: Point[] | undefined = undefined;
+  if (perfectPoints.length >= 3) {
+    // Sort perfect points by angle from centroid to form a convex/star polygon
+    const center = {
+      lat: perfectPoints.reduce((sum, p) => sum + p.point.lat, 0) / perfectPoints.length,
+      lng: perfectPoints.reduce((sum, p) => sum + p.point.lng, 0) / perfectPoints.length,
+    };
+    
+    polygonPoints = perfectPoints
+      .map(p => p.point)
+      .sort((a, b) => {
+        const angleA = Math.atan2(a.lat - center.lat, a.lng - center.lng);
+        const angleB = Math.atan2(b.lat - center.lat, b.lng - center.lng);
+        return angleA - angleB;
+      });
+  }
+
   const candidates = perfectPoints.length >= 2 ? perfectPoints : scoredPoints.slice(0, Math.max(3, Math.ceil(intersections.length * 0.3)));
 
   let sumLat = 0, sumLng = 0, sumW = 0;
@@ -317,7 +342,8 @@ export function calculateRangeTrilateration(circles: Circle[]): { point: Point; 
   return { 
     point: bestPoint, 
     confidence,
-    errorRadius: rmse 
+    errorRadius: rmse,
+    polygonPoints
   };
 }
 

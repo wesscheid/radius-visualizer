@@ -41,6 +41,7 @@ export interface IntersectionPoint {
   errorRadius?: number; // meters
   parents: string[]; // IDs of radii involved
   color?: string;
+  polygonPoints?: { lat: number, lng: number }[]; // For outlining overlap area
 }
 
 interface AppState {

@@ -1,10 +1,23 @@
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Circle, Polyline, Tooltip, useMap, useMapEvents, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle, Polyline, Tooltip, useMap, useMapEvents, CircleMarker, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useStore } from '../store/useStore';
 import { formatRadius } from '../utils/format';
 import { computeDestinationPoint } from '../utils/trilateration';
+
+/**
+ * Generates an array of points forming a circle, used for complex polygon rendering (like annulus).
+ */
+const generateCirclePoints = (center: { lat: number; lng: number }, radius: number, points: number = 64) => {
+  const coords: [number, number][] = [];
+  for (let i = 0; i < points; i++) {
+    const bearing = (i * 360) / points;
+    const p = computeDestinationPoint(center, radius, bearing);
+    coords.push([p.lat, p.lng]);
+  }
+  return coords;
+};
 
 // Fix for default Leaflet marker icons in React
 // @ts-ignore
@@ -129,6 +142,20 @@ const MapComponent: React.FC = () => {
                   />
                 )}
                 
+                {/* Overlap Area Polygon */}
+                {intersection.polygonPoints && (
+                  <Polygon
+                    positions={intersection.polygonPoints.map(p => [p.lat, p.lng] as [number, number])}
+                    pathOptions={{
+                      color: markerColor,
+                      fillColor: markerColor,
+                      fillOpacity: 0.3,
+                      weight: 2,
+                    }}
+                    interactive={false}
+                  />
+                )}
+
                 {/* Best Fit Point */}
                 <CircleMarker
                   center={[intersection.lat, intersection.lng]}
@@ -197,7 +224,7 @@ const MapComponent: React.FC = () => {
               
               {isHybrid ? (
                 <>
-                  {/* Min Radius */}
+                  {/* Min Radius - Dashed outline */}
                   <Circle
                     center={[radius.lat, radius.lng]}
                     radius={radius.radiusMin ?? radius.radius}
@@ -210,14 +237,37 @@ const MapComponent: React.FC = () => {
                     }}
                     interactive={false}
                   />
-                  {/* Max Radius - This one provides the fill for the annulus area */}
+
+                  {/* Annulus Fill - Color ONLY the ring between min and max */}
+                  {radius.fill && (
+                    <Polygon
+                      positions={[
+                        generateCirclePoints({ lat: radius.lat, lng: radius.lng }, radius.radiusMax ?? radius.radius, 128),
+                        generateCirclePoints({ lat: radius.lat, lng: radius.lng }, radius.radiusMin ?? 0, 128)
+                      ]}
+                      pathOptions={{
+                        fillColor: color,
+                        fillOpacity: radius.opacity,
+                        stroke: false,
+                      }}
+                      interactive={true}
+                      eventHandlers={{
+                        click: (e) => {
+                          L.DomEvent.stopPropagation(e);
+                          if (!isMeasuring) selectRadius(radius.id);
+                        },
+                      }}
+                    />
+                  )}
+
+                  {/* Max Radius - Provides the outer solid outline and interactive selection area */}
                   <Circle
                     center={[radius.lat, radius.lng]}
                     radius={radius.radiusMax ?? radius.radius}
                     pathOptions={{
                       color: color,
-                      fillColor: color,
-                      fillOpacity: radius.fill ? radius.opacity : 0,
+                      fillColor: 'transparent',
+                      fillOpacity: 0.0001, // Invisible but interactive for easier clicking
                       weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 2 : 1) : 0,
                     }}
                     eventHandlers={{
