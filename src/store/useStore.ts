@@ -66,6 +66,7 @@ interface AppState {
   showIntersections: boolean;
   hideInputRadii: boolean;
   showUngroupedAnalysis: boolean;
+  focusOverlap: boolean; // New state for hybrid mode
 
   // Actions
   setRadii: (radii: Radius[]) => void;
@@ -96,6 +97,7 @@ interface AppState {
   setIntersections: (points: IntersectionPoint[]) => void;
   toggleIntersectionDisplay: () => void;
   toggleHideInputRadii: () => void;
+  toggleFocusOverlap: () => void;
   toggleGroupAnalysis: (groupId: string) => void;
   toggleUngroupedAnalysis: () => void;
   setGeolocationDenied: (denied: boolean) => void;
@@ -124,6 +126,7 @@ export const useStore = create<AppState>((set, get) => ({
   showIntersections: true,
   hideInputRadii: false,
   showUngroupedAnalysis: false,
+  focusOverlap: false,
 
   setRadii: (radii) => set({ radii }),
   setGroups: (groups) => set({ groups }),
@@ -295,6 +298,7 @@ export const useStore = create<AppState>((set, get) => ({
   setIntersections: (intersections) => set({ intersections }),
   toggleIntersectionDisplay: () => set((state) => ({ showIntersections: !state.showIntersections })),
   toggleHideInputRadii: () => set((state) => ({ hideInputRadii: !state.hideInputRadii })),
+  toggleFocusOverlap: () => set((state) => ({ focusOverlap: !state.focusOverlap })),
 
   toggleGroupAnalysis: (groupId: string) => set((state) => ({
     groups: state.groups.map(g => g.id === groupId ? { ...g, showAnalysis: !g.showAnalysis } : g)

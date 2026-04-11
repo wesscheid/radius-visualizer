@@ -74,7 +74,8 @@ const MapComponent: React.FC = () => {
     measurementPoints,
     intersections,
     showIntersections,
-    hideInputRadii
+    hideInputRadii,
+    focusOverlap
   } = useStore();
 
   return (
@@ -197,7 +198,7 @@ const MapComponent: React.FC = () => {
           }
         })}
 
-        {!hideInputRadii && radii.map((radius) => {
+        {radii.map((radius) => {
           const group = groups.find(g => g.id === radius.groupId);
           const isVisible = radius.visible && (group ? group.visible : true);
           const color = group ? group.color : radius.color;
@@ -209,6 +210,7 @@ const MapComponent: React.FC = () => {
 
           return isVisible && (
             <React.Fragment key={radius.id}>
+              {/* Marker - always visible if radius is visible, unless explicitly hidden by other logic */}
               <Marker 
                 position={[radius.lat, radius.lng]}
                 draggable={selectedRadiusId === radius.id}
@@ -222,35 +224,75 @@ const MapComponent: React.FC = () => {
                 }}
               />
               
-              {isHybrid ? (
+              {!hideInputRadii && !focusOverlap && (
                 <>
-                  {/* Min Radius - Dashed outline */}
-                  <Circle
-                    center={[radius.lat, radius.lng]}
-                    radius={radius.radiusMin ?? radius.radius}
-                    pathOptions={{
-                      color: color,
-                      fillColor: 'transparent',
-                      fillOpacity: 0,
-                      weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 2 : 1) : 0,
-                      dashArray: '5, 10',
-                    }}
-                    interactive={false}
-                  />
+                  {isHybrid ? (
+                    <>
+                      {/* Min Radius - Dashed outline */}
+                      <Circle
+                        center={[radius.lat, radius.lng]}
+                        radius={radius.radiusMin ?? radius.radius}
+                        pathOptions={{
+                          color: color,
+                          fillColor: 'transparent',
+                          fillOpacity: 0,
+                          weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 2 : 1) : 0,
+                          dashArray: '5, 10',
+                        }}
+                        interactive={false}
+                      />
 
-                  {/* Annulus Fill - Color ONLY the ring between min and max */}
-                  {radius.fill && (
-                    <Polygon
-                      positions={[
-                        generateCirclePoints({ lat: radius.lat, lng: radius.lng }, radius.radiusMax ?? radius.radius, 128),
-                        generateCirclePoints({ lat: radius.lat, lng: radius.lng }, radius.radiusMin ?? 0, 128)
-                      ]}
+                      {/* Annulus Fill - Color ONLY the ring between min and max */}
+                      {radius.fill && (
+                        <Polygon
+                          positions={[
+                            generateCirclePoints({ lat: radius.lat, lng: radius.lng }, radius.radiusMax ?? radius.radius, 128),
+                            generateCirclePoints({ lat: radius.lat, lng: radius.lng }, radius.radiusMin ?? 0, 128)
+                          ]}
+                          pathOptions={{
+                            fillColor: color,
+                            fillOpacity: radius.opacity,
+                            stroke: false,
+                          }}
+                          interactive={true}
+                          eventHandlers={{
+                            click: (e) => {
+                              L.DomEvent.stopPropagation(e);
+                              if (!isMeasuring) selectRadius(radius.id);
+                            },
+                          }}
+                        />
+                      )}
+
+                      {/* Max Radius - Provides the outer solid outline and interactive selection area */}
+                      <Circle
+                        center={[radius.lat, radius.lng]}
+                        radius={radius.radiusMax ?? radius.radius}
+                        pathOptions={{
+                          color: color,
+                          fillColor: 'transparent',
+                          fillOpacity: 0.0001, // Invisible but interactive for easier clicking
+                          weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 2 : 1) : 0,
+                        }}
+                        eventHandlers={{
+                          click: (e) => {
+                            L.DomEvent.stopPropagation(e);
+                            if (!isMeasuring) selectRadius(radius.id);
+                          },
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <Circle
+                      center={[radius.lat, radius.lng]}
+                      radius={radius.radius}
                       pathOptions={{
+                        color: color,
                         fillColor: color,
-                        fillOpacity: radius.opacity,
-                        stroke: false,
+                        fillOpacity: radius.fill ? radius.opacity : 0,
+                        weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 3 : 1) : 0,
+                        dashArray: radius.borderStyle === 'dashed' ? '5, 5' : radius.borderStyle === 'dotted' ? '1, 5' : undefined,
                       }}
-                      interactive={true}
                       eventHandlers={{
                         click: (e) => {
                           L.DomEvent.stopPropagation(e);
@@ -259,46 +301,10 @@ const MapComponent: React.FC = () => {
                       }}
                     />
                   )}
-
-                  {/* Max Radius - Provides the outer solid outline and interactive selection area */}
-                  <Circle
-                    center={[radius.lat, radius.lng]}
-                    radius={radius.radiusMax ?? radius.radius}
-                    pathOptions={{
-                      color: color,
-                      fillColor: 'transparent',
-                      fillOpacity: 0.0001, // Invisible but interactive for easier clicking
-                      weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 2 : 1) : 0,
-                    }}
-                    eventHandlers={{
-                      click: (e) => {
-                        L.DomEvent.stopPropagation(e);
-                        if (!isMeasuring) selectRadius(radius.id);
-                      },
-                    }}
-                  />
                 </>
-              ) : (
-                <Circle
-                  center={[radius.lat, radius.lng]}
-                  radius={radius.radius}
-                  pathOptions={{
-                    color: color,
-                    fillColor: color,
-                    fillOpacity: radius.fill ? radius.opacity : 0,
-                    weight: (radius.outline ?? true) ? (selectedRadiusId === radius.id ? 3 : 1) : 0,
-                    dashArray: radius.borderStyle === 'dashed' ? '5, 5' : radius.borderStyle === 'dotted' ? '1, 5' : undefined,
-                  }}
-                  eventHandlers={{
-                    click: (e) => {
-                      L.DomEvent.stopPropagation(e);
-                      if (!isMeasuring) selectRadius(radius.id);
-                    },
-                  }}
-                />
               )}
 
-              {selectedRadiusId === radius.id && (
+              {selectedRadiusId === radius.id && !focusOverlap && (
                 <>
                   {!isHybrid && (
                     <>

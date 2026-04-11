@@ -124,7 +124,10 @@ const Sidebar: React.FC = () => {
     toggleUngroupedAnalysis,
     locatingMode,
     setLocatingMode,
-  } = useStore();
+    focusOverlap,
+    toggleFocusOverlap
+    } = useStore();
+
 
   const [user] = useAuthState(auth);
   const [isGuest, setIsGuest] = useState(true);
@@ -974,9 +977,22 @@ const EditPanel = ({
         </>
       ) : (
         <div className="space-y-4 bg-dark-surface/50 p-3 rounded-lg border border-dark-border">
-          <div className="flex items-center gap-2 mb-1">
-             <Target size={14} className="text-primary" />
-             <span className="text-[10px] font-bold text-dark-text-secondary uppercase">Hybrid Range (Annulus)</span>
+          <div className="flex items-center justify-between mb-2 border-b border-dark-border/30 pb-2">
+            <div className="flex items-center gap-2">
+               <Target size={14} className="text-primary" />
+               <span className="text-[10px] font-bold text-dark-text-secondary uppercase">Hybrid Range (Annulus)</span>
+            </div>
+            <button
+              onClick={toggleFocusOverlap}
+              className={clsx(
+                "flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold transition-all border",
+                focusOverlap 
+                  ? "bg-primary text-white border-primary" 
+                  : "bg-dark-surface text-dark-text-secondary border-dark-border hover:border-primary/50"
+              )}
+            >
+              {focusOverlap ? "FOCUS: OVERLAP" : "FOCUS: ALL"}
+            </button>
           </div>
           
           <div>
