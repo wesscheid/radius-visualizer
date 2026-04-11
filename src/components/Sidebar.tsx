@@ -123,9 +123,7 @@ const Sidebar: React.FC = () => {
     toggleGroupAnalysis,
     toggleUngroupedAnalysis,
     locatingMode,
-    setLocatingMode,
-    focusOverlap,
-    toggleFocusOverlap
+    setLocatingMode
     } = useStore();
 
 
@@ -703,7 +701,7 @@ const EditPanel = ({
   setMapCenter, 
   setMapZoom 
 }: EditPanelProps) => {
-  const locatingMode = useStore((state) => state.locatingMode);
+  const { locatingMode, focusOverlap, toggleFocusOverlap } = useStore();
   const [locationInput, setLocationInput] = useState(`${selectedRadius.lat.toFixed(6)}, ${selectedRadius.lng.toFixed(6)}`);
 
   const { miles: minMiles, feet: minFeet } = metersToImperial(selectedRadius.radiusMin ?? selectedRadius.radius * 0.8);
