@@ -7,6 +7,7 @@
 *   **Data Persistence (2026-01-16):** Implemented Firebase Anonymous Authentication and Firestore synchronization. Data now persists across sessions without requiring a formal login.
 *   **Geolocation:** Added "Zoom to Current Location" functionality using the browser's Geolocation API.
 *   **Production Deployment:** Successfully deployed to Vercel with automatic CI/CD from the `main` branch.
+*   **Hybrid Range & Overlap Visualization (2026-04-11):** Implemented true annulus rendering (hollow center) and a geometric "Agreement Zone" polygon that highlights the exact area where all ranges in a group overlap. Added a "Focus" toggle to declutter the map by hiding the larger circles while keeping the overlap and markers visible.
 
 ---
 
@@ -22,7 +23,7 @@
 | **State Management** | ✅ Active | Powered by `Zustand` with Firestore sync |
 | **Data Persistence** | ✅ Active | Firebase Anonymous Auth + Firestore |
 | **Geolocation** | ✅ Active | "Locate" button in toolbar |
-| **Overlap Detection** | ⏳ Planned | Visual crosshatch for intersections |
+| **Overlap Detection** | ✅ Active | Visual "Agreement Zone" polygon and annulus rendering |
 | **Export (KML/CSV)** | ⏳ Planned | Modal for file generation |
 
 ---
@@ -72,10 +73,9 @@ We use **Zustand** for local state and **Firestore** for persistence.
 
 ## 📝 Roadmap & Next Steps
 
-1.  **Overlap Logic:** Implement a calculation to detect intersecting circles and apply a custom SVG pattern.
-2.  **Units Toggle:** Add ability to switch between Miles and Kilometers.
-3.  **Account Upgrading:** Allow anonymous users to link a Google account to keep their data permanently across devices.
-4.  **Export:** Add KML/CSV export for GIS compatibility.
+1.  **Units Toggle:** Add ability to switch between Miles and Kilometers.
+2.  **Account Upgrading:** Allow anonymous users to link a Google account to keep their data permanently across devices.
+3.  **Export:** Add KML/CSV export for GIS compatibility.
 
 ---
 
