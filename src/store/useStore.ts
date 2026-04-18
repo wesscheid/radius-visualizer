@@ -106,6 +106,15 @@ interface AppState {
 
 const DEFAULT_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'];
 
+const filterUndefined = (obj: any) => {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    if (value !== undefined) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as any);
+};
+
 export const useStore = create<AppState>((set, get) => ({
   radii: [],
   groups: [],
@@ -160,7 +169,7 @@ export const useStore = create<AppState>((set, get) => ({
     };
 
     if (userId) {
-      await setDoc(doc(db, 'radii', id), newRadius);
+      await setDoc(doc(db, 'radii', id), filterUndefined(newRadius));
     } else {
       set((state) => ({ radii: [...state.radii, newRadius], selectedRadiusId: id }));
     }
@@ -169,7 +178,7 @@ export const useStore = create<AppState>((set, get) => ({
   updateRadius: async (id, updates) => {
     const radius = get().radii.find(r => r.id === id);
     if (radius?.userId) {
-      await setDoc(doc(db, 'radii', id), { ...radius, ...updates });
+      await setDoc(doc(db, 'radii', id), filterUndefined({ ...radius, ...updates }));
     } else {
       set((state) => ({
         radii: state.radii.map((r) => (r.id === id ? { ...r, ...updates } : r)),
@@ -201,7 +210,7 @@ export const useStore = create<AppState>((set, get) => ({
     };
 
     if (userId) {
-      await setDoc(doc(db, 'groups', id), newGroup);
+      await setDoc(doc(db, 'groups', id), filterUndefined(newGroup));
     } else {
       set((state) => ({ groups: [...state.groups, newGroup] }));
     }
@@ -211,7 +220,7 @@ export const useStore = create<AppState>((set, get) => ({
   updateGroup: async (id, updates) => {
     const group = get().groups.find(g => g.id === id);
     if (group?.userId) {
-      await setDoc(doc(db, 'groups', id), { ...group, ...updates });
+      await setDoc(doc(db, 'groups', id), filterUndefined({ ...group, ...updates }));
     } else {
       set((state) => ({
         groups: state.groups.map((g) => (g.id === id ? { ...g, ...updates } : g)),

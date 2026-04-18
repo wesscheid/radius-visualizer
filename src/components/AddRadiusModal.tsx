@@ -44,16 +44,24 @@ const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConf
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Ensure we have numbers
+    const m = miles === '' ? 0 : Number(miles);
+    const f = feet === '' ? 0 : Number(feet);
+    const minM = minMiles === '' ? 0 : Number(minMiles);
+    const minF = minFeet === '' ? 0 : Number(minFeet);
+    const maxM = maxMiles === '' ? 0 : Number(maxMiles);
+    const maxF = maxFeet === '' ? 0 : Number(maxFeet);
+
     let radius: number;
     let radiusMin: number | undefined;
     let radiusMax: number | undefined;
 
     if (locatingMode === 'hybrid') {
-      radiusMin = imperialToMeters(minMiles === '' ? 0 : Number(minMiles), minFeet === '' ? 0 : Number(minFeet));
-      radiusMax = imperialToMeters(maxMiles === '' ? 0 : Number(maxMiles), maxFeet === '' ? 0 : Number(maxFeet));
+      radiusMin = imperialToMeters(minM, minF);
+      radiusMax = imperialToMeters(maxM, maxF);
       radius = (radiusMin + radiusMax) / 2;
     } else {
-      radius = imperialToMeters(miles === '' ? 0 : Number(miles), feet === '' ? 0 : Number(feet));
+      radius = imperialToMeters(m, f);
     }
 
     let finalGroupId: string | null = selectedGroupId || null;
@@ -63,28 +71,33 @@ const AddRadiusModal: React.FC<AddRadiusModalProps> = ({ isOpen, onClose, onConf
         alert("Please enter a name for the new group.");
         return;
       }
-      finalGroupId = await onCreateGroup(newGroupName);
-    } else if (!selectedGroupId) {
-      alert("Please select a group or create a new one.");
+      try {
+        finalGroupId = await onCreateGroup(newGroupName);
+      } catch (err) {
+        console.error("Failed to create group", err);
+        return;
+      }
+    }
+    
+    if (radius <= 0 && (!radiusMax || radiusMax <= 0)) {
+      alert("Radius distance must be greater than zero.");
       return;
     }
     
-    if (radius === 0 && !radiusMax) {
-      alert("Radius distance cannot be zero.");
-      return;
-    }
     onConfirm(radius, finalGroupId, radiusMin, radiusMax);
   };
 
   const isFormValid = () => {
-    const isGroupValid = (selectedGroupId !== '' && !isCreatingNewGroup) || (isCreatingNewGroup && newGroupName.trim() !== '');
+    const isGroupValid = !isCreatingNewGroup || (isCreatingNewGroup && newGroupName.trim() !== '');
     
     if (locatingMode === 'hybrid') {
       const min = imperialToMeters(minMiles === '' ? 0 : Number(minMiles), minFeet === '' ? 0 : Number(minFeet));
       const max = imperialToMeters(maxMiles === '' ? 0 : Number(maxMiles), maxFeet === '' ? 0 : Number(maxFeet));
+      // Max must be > 0, and max must be >= min
       return isGroupValid && max > 0 && max >= min;
     } else {
       const meters = imperialToMeters(miles === '' ? 0 : Number(miles), feet === '' ? 0 : Number(feet));
+      // Meters must be > 0 for standard mode
       return isGroupValid && meters > 0;
     }
   };

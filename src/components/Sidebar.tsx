@@ -188,11 +188,19 @@ const Sidebar: React.FC = () => {
 
   const handleConfirmAdd = async (radius: number, groupId: string | null, radiusMin?: number, radiusMax?: number) => {
     if (tempLocation) {
-      await addRadius(tempLocation.lat, tempLocation.lng, auth.currentUser?.uid, { radius, radiusMin, radiusMax, groupId });
-      setMapCenter(tempLocation.lat, tempLocation.lng);
-      setMapZoom(13);
+      try {
+        await addRadius(tempLocation.lat, tempLocation.lng, auth.currentUser?.uid, { radius, radiusMin, radiusMax, groupId });
+        setMapCenter(tempLocation.lat, tempLocation.lng);
+        setMapZoom(13);
+        setIsAddModalOpen(false);
+        setTempLocation(null);
+      } catch (error: any) {
+        console.error("Failed to add location:", error);
+        window.alert("Failed to add location: " + (error.message || "Unknown error"));
+      }
+    } else {
+      console.warn("handleConfirmAdd called without tempLocation");
       setIsAddModalOpen(false);
-      setTempLocation(null);
     }
   };
   
